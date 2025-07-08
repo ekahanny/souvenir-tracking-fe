@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.p-sidebar-left .p-sidebar {
+  width: 0rem !important;
+}
+
+.p-dropdown-filter-container {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-width: 1px;
+  border-color: #747373;
+  border-radius: 0.375rem;
+}
+
+.p-dropdown-filter.p-inputtext.p-component:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: inherit;
+}
+
+.center-table-wrapper .p-datatable .p-datatable-thead > tr > th {
+  text-align: center !important;
+}
+
+.center-table-wrapper .p-column-header-content {
+  justify-content: center !important;
+}
+
+.custom-tabview .p-tabview-nav {
+  border-bottom: 1px solid #0369a1;
+}
+
+.custom-tabview .p-tabview-nav .p-tabview-nav-link {
+  color: #64748b; /* warna text tab tidak aktif */
+  border: 1px solid #0369a1;
+  margin-left: 4px;
+  margin-top: 15px;
+}
+
+.custom-tabview .p-tabview-nav .p-tabview-nav-link:not(.p-disabled):focus {
+  box-shadow: none; /* menghilangkan outline focus */
+}
+
+.custom-tabview .p-tabview-nav .p-tabview-ink-bar {
+  background-color: #0369a1; /* warna sky-700 untuk underline tab aktif */
+}
+
+.custom-tabview .p-tabview-nav .p-highlight .p-tabview-nav-link {
+  color: #0369a1; /* warna text tab aktif */
+  border-color: #0369a1;
+}
