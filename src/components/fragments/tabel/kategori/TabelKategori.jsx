@@ -51,7 +51,10 @@ export default function TabelKategori() {
   const fetchProducts = async () => {
     try {
       const response = await ProductService.getAllProducts();
-      const productInStock = response.Produk.filter((p) => p.stok > 0);
+      const products = response.data || [];
+      const productInStock = products.filter((p) => p.stok > 0);
+      console.log("product in stock: ", productInStock);
+
       setProducts(productInStock);
     } catch (error) {
       console.error("Gagal mengambil produk: ", error);
@@ -72,7 +75,7 @@ export default function TabelKategori() {
   const showProductsDialog = (category) => {
     setSelectedCategory(category);
     const filteredProducts = products.filter(
-      (product) => product.kategori === category.id
+      (product) => product.kategori && product.kategori._id === category.id
     );
     setCategoryProducts(filteredProducts);
     setDialogVisible(true);
@@ -105,7 +108,9 @@ export default function TabelKategori() {
   };
 
   const getProductCount = (categoryId) => {
-    return products.filter((product) => product.kategori === categoryId).length;
+    return products.filter(
+      (product) => product.kategori && product.kategori._id === categoryId
+    ).length;
   };
 
   const productCountBodyTemplate = (rowData) => {
@@ -484,12 +489,6 @@ export default function TabelKategori() {
           <Column
             field="nama_produk"
             header="Nama Produk"
-            className="border border-slate-300"
-            headerClassName="border border-slate-300"
-          />
-          <Column
-            field="kode_produk"
-            header="Kode Produk"
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           />

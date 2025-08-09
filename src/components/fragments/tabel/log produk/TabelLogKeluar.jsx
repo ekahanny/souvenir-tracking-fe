@@ -21,18 +21,18 @@ import UserService from "../../../../services/UserService";
 
 export default function TabelLogKeluar() {
   let emptyProduct = {
-    kode_produk: "",
     nama_produk: "",
     tanggal: "",
     kategori: "",
-    harga: 0,
     stok: 0,
     isProdukMasuk: false,
+    nama_kegiatan: "",
+    pic: "",
   };
 
-  const [products, setProducts] = useState([]); // products log
-  const [product, setProduct] = useState(emptyProduct); // product log
-  const [productList, setProductList] = useState([]); // product
+  const [products, setProducts] = useState([]);
+  const [product, setProduct] = useState(emptyProduct);
+  const [productList, setProductList] = useState([]);
   const [productDialog, setProductDialog] = useState(false);
   const [deleteLogProductDialog, setdeleteLogProductDialog] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -42,7 +42,6 @@ export default function TabelLogKeluar() {
   const [exportDialog, setExportDialog] = useState(false);
   const toast = useRef(null);
   const dt = useRef(null);
-  const [lastOutPrice, setLastOutPrice] = useState(0);
   const [userMap, setUserMap] = useState({});
 
   const fetchLogProducts = async () => {
@@ -51,7 +50,6 @@ export default function TabelLogKeluar() {
       const productList =
         response.LogProduk.filter((item) => item.isProdukMasuk === false) || [];
 
-      // Array promises untuk mengambil data user
       const userPromises = productList.map((item) =>
         item.createdBy
           ? UserService.getUserById(item.createdBy)
@@ -59,7 +57,6 @@ export default function TabelLogKeluar() {
       );
 
       const users = await Promise.all(userPromises);
-
       const userMapping = {};
       users.forEach((user, index) => {
         if (user) {
@@ -71,13 +68,13 @@ export default function TabelLogKeluar() {
 
       const products = productList.map((item) => ({
         _id: item._id,
-        kode_produk: item.produk ? item.produk.kode_produk : "N/A",
         nama_produk: item.produk ? item.produk.nama_produk : "N/A",
         kategori: item.produk ? item.produk.kategori : "Unknown",
         tanggal: item.tanggal,
-        harga: item.harga,
         stok: item.stok,
-        createdBy: item.createdBy, // Tambahkan createdBy
+        nama_kegiatan: item.nama_kegiatan || "",
+        pic: item.pic || "",
+        createdBy: item.createdBy,
       }));
 
       setProducts(products);
@@ -90,7 +87,8 @@ export default function TabelLogKeluar() {
     try {
       setIsLoadingProducts(true);
       const response = await ProductService.getAllProducts();
-      const productInStock = response.Produk.filter((p) => p.stok >= 0);
+      const products = response.data || [];
+      const productInStock = products.filter((p) => p.stok > 0);
       setProductList(productInStock);
     } catch (error) {
       console.error("Gagal mengambil produk: ", error);
@@ -119,15 +117,6 @@ export default function TabelLogKeluar() {
     fetchProducts();
   }, []);
 
-  const formatCurrency = (value) => {
-    return (value || 0).toLocaleString("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  };
-
   const openNew = () => {
     fetchProducts();
     setProduct({ ...emptyProduct });
@@ -145,19 +134,17 @@ export default function TabelLogKeluar() {
     setdeleteLogProductDialog(false);
   };
 
-  const getFirstInDate = async (kodeProduk) => {
+  const getFirstInDate = async (namaProduk) => {
     try {
       const response = await InLogProdService.getAllLogProducts();
       const productLogs = response.LogProduk || [];
 
-      // Filter hanya log masuk untuk produk ini
       const inLogs = productLogs.filter(
         (log) =>
-          log.produk?.kode_produk === kodeProduk && log.isProdukMasuk === true
+          log.produk?.nama_produk === namaProduk && log.isProdukMasuk === true
       );
       if (inLogs.length === 0) return null;
 
-      // Urutkan berdasarkan tanggal, kemudian ambil tanggal paling awal
       inLogs.sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
       return new Date(inLogs[0].tanggal);
     } catch (error) {
@@ -169,12 +156,7 @@ export default function TabelLogKeluar() {
   const saveProduct = async () => {
     setSubmitted(true);
 
-    if (
-      !product.kode_produk ||
-      !product.tanggal ||
-      !product.harga ||
-      !product.stok
-    ) {
+    if (!product.nama_produk || !product.tanggal || !product.stok) {
       toast.current.show({
         severity: "warn",
         summary: "Peringatan",
@@ -184,12 +166,21 @@ export default function TabelLogKeluar() {
       return;
     }
 
+    if (!product.nama_kegiatan || !product.pic) {
+      toast.current.show({
+        severity: "warn",
+        summary: "Peringatan",
+        detail: "Nama kegiatan dan PIC harus diisi!",
+        life: 3000,
+      });
+      return;
+    }
+
     const selectedProduct = productList.find(
-      (p) => p.kode_produk === product.kode_produk
+      (p) => p.nama_produk === product.nama_produk
     );
 
-    // Validasi stok
-    if (selectedProduct && !isEditMode && product.stok > selectedProduct.stok) {
+    if (selectedProduct && product.stok > selectedProduct.stok) {
       toast.current.show({
         severity: "error",
         summary: "Error",
@@ -199,8 +190,7 @@ export default function TabelLogKeluar() {
       return;
     }
 
-    // Validasi tanggal keluar
-    const firstInDate = await getFirstInDate(product.kode_produk);
+    const firstInDate = await getFirstInDate(product.nama_produk);
     const outDate = new Date(product.tanggal);
 
     if (firstInDate && outDate < firstInDate) {
@@ -219,13 +209,13 @@ export default function TabelLogKeluar() {
       formattedDate.setHours(formattedDate.getHours() + 8);
 
       const productData = {
-        kode_produk: product.kode_produk,
         nama_produk: product.nama_produk,
         tanggal: formattedDate.toISOString(),
         kategori: product.kategori,
-        harga: product.harga,
         stok: product.stok,
         isProdukMasuk: false,
+        nama_kegiatan: product.nama_kegiatan,
+        pic: product.pic,
       };
 
       if (isEditMode) {
@@ -233,10 +223,9 @@ export default function TabelLogKeluar() {
       } else {
         await InLogProdService.addLogProduct(productData);
 
-        // Update stok di local state -> option dropdown
         setProductList((prevList) =>
           prevList.map((item) =>
-            item.kode_produk === product.kode_produk
+            item.nama_produk === product.nama_produk
               ? { ...item, stok: item.stok - product.stok }
               : item
           )
@@ -278,9 +267,6 @@ export default function TabelLogKeluar() {
       tanggal: new Date(product.tanggal),
       kategori: product.kategori?.id || product.kategori,
     });
-    console.log("product diedit: ", product);
-
-    setSubmitted(false);
     setIsEditMode(true);
     setProductDialog(true);
   };
@@ -288,10 +274,6 @@ export default function TabelLogKeluar() {
   const confirmdeleteLogProduct = (product) => {
     setProduct(product);
     setdeleteLogProductDialog(true);
-  };
-
-  const userBodyTemplate = (rowData) => {
-    return userMap[rowData.createdBy] || "Unknown";
   };
 
   const deleteLogProduct = async () => {
@@ -317,7 +299,6 @@ export default function TabelLogKeluar() {
   const handleConfirmExport = () => {
     setExportDialog(false);
 
-    // Pastikan products ada dan tidak kosong
     if (!products || products.length === 0) {
       toast.current.show({
         severity: "warn",
@@ -328,27 +309,22 @@ export default function TabelLogKeluar() {
       return;
     }
 
-    // Format data untuk Excel dengan lebih sederhana
     const excelData = products.map((product) => ({
-      "Kode Produk": product.kode_produk || "",
       "Nama Produk": product.nama_produk || "",
       Kategori:
         categories.find((cat) => cat.id === product.kategori)?.name ||
         product.kategori ||
         "",
       "Tanggal Keluar": product.tanggal ? formatDate(product.tanggal) : "",
-      Harga: product.harga ? product.harga : 0,
       "Stok (pcs)": product.stok ? product.stok : 0,
+      "Nama Kegiatan": product.nama_kegiatan || "",
+      PIC: product.pic || "",
+      "Ditambahkan Oleh": userMap[product.createdBy] || "Unknown",
     }));
 
-    // Buat worksheet
     const ws = XLSX.utils.json_to_sheet(excelData);
-
-    // Buat workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Barang Keluar");
-
-    // Export ke file Excel
     XLSX.writeFile(wb, "Data_Barang_Keluar.xlsx");
   };
 
@@ -356,32 +332,25 @@ export default function TabelLogKeluar() {
     setExportDialog(true);
   };
 
-  const onProductCodeChange = (e) => {
-    const selectedCode = e.value;
+  const onProductNameChange = (e) => {
+    const selectedName = e.value;
     const selectedProduct = productList.find(
-      (p) => p.kode_produk === selectedCode
+      (p) => p.nama_produk === selectedName
     );
-
-    // Cari log keluar untuk produk ini dari data yang sudah di-fetch (products)
-    const productLogs = products.filter(
-      (log) => log.kode_produk === selectedCode
-    );
-
-    // Urutkan dari yang terbaru
-    productLogs.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-
-    // Ambil harga terakhir jika ada log keluar
-    const lastOutPrice = productLogs.length > 0 ? productLogs[0].harga : 0;
 
     setProduct((prev) => ({
       ...prev,
-      kode_produk: selectedCode,
-      nama_produk: selectedProduct?.nama_produk || "",
+      nama_produk: selectedName,
       kategori: selectedProduct?.kategori || "",
-      harga: lastOutPrice, // Gunakan harga terakhir atau 0 jika tidak ada
     }));
+  };
 
-    setLastOutPrice(lastOutPrice);
+  const onInputChange = (e, name) => {
+    const val = (e.target && e.target.value) || "";
+    setProduct((prevProduct) => ({
+      ...prevProduct,
+      [name]: val,
+    }));
   };
 
   const onInputNumberChange = (e, name) => {
@@ -400,38 +369,12 @@ export default function TabelLogKeluar() {
     });
   };
 
-  const leftToolbarTemplate = () => {
-    return (
-      <div className="flex flex-wrap gap-2">
-        <Button
-          label="Tambah"
-          icon="pi pi-plus"
-          onClick={openNew}
-          className="bg-sky-600 text-white px-3 py-2"
-        />
-      </div>
-    );
-  };
-
-  const rightToolbarTemplate = () => {
-    return (
-      <Button
-        label="Export"
-        icon="pi pi-upload"
-        onClick={exportExcel}
-        className="bg-sky-600 text-white px-3 py-2"
-      />
-    );
-  };
-
-  const priceBodyTemplate = (rowData) => {
-    return formatCurrency(rowData?.harga);
+  const userBodyTemplate = (rowData) => {
+    return userMap[rowData.createdBy] || "Unknown";
   };
 
   const categoryBodyTemplate = (rowData) => {
-    const category = categories.find((cat) => {
-      return cat.id === rowData.kategori;
-    });
+    const category = categories.find((cat) => cat.id === rowData.kategori);
     return category ? category.name : "Unknown";
   };
 
@@ -455,6 +398,30 @@ export default function TabelLogKeluar() {
           size="small"
         />
       </div>
+    );
+  };
+
+  const leftToolbarTemplate = () => {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <Button
+          label="Tambah"
+          icon="pi pi-plus"
+          onClick={openNew}
+          className="bg-sky-600 text-white px-3 py-2"
+        />
+      </div>
+    );
+  };
+
+  const rightToolbarTemplate = () => {
+    return (
+      <Button
+        label="Export"
+        icon="pi pi-upload"
+        onClick={exportExcel}
+        className="bg-sky-600 text-white px-3 py-2"
+      />
     );
   };
 
@@ -564,8 +531,8 @@ export default function TabelLogKeluar() {
               root: { className: "bg-gray-100 p-2" },
               pageButton: ({ context }) =>
                 context.active
-                  ? { className: "bg-sky-500 text-white font-bold" } // Halaman aktif
-                  : { className: "text-gray-700 hover:bg-gray-200" }, // Halaman non-aktif
+                  ? { className: "bg-sky-500 text-white font-bold" }
+                  : { className: "text-gray-700 hover:bg-gray-200" },
             },
           }}
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
@@ -576,19 +543,11 @@ export default function TabelLogKeluar() {
           tableStyle={{ maxWidth: "100%" }}
           emptyMessage="Tidak ada data ditemukan."
         >
-          {/* Header Kolom */}
-          <Column
-            field="kode_produk"
-            header="Kode Produk"
-            style={{ minWidth: "10rem" }}
-            className="border border-slate-300 text-black"
-            headerClassName="border border-slate-300 text-black"
-          ></Column>
           <Column
             field="nama_produk"
             header="Nama Produk"
             sortable
-            style={{ minWidth: "12rem" }}
+            style={{ minWidth: "16rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           ></Column>
@@ -610,27 +569,32 @@ export default function TabelLogKeluar() {
             headerClassName="border border-slate-300"
           ></Column>
           <Column
-            field="harga"
-            header="Harga"
-            body={priceBodyTemplate}
+            field="stok"
+            header="Jumlah Barang"
             sortable
             style={{ minWidth: "8rem" }}
+            className="border border-slate-300"
+            headerClassName="border border-slate-300"
+          ></Column>
+          {/* <Column
+            field="nama_kegiatan"
+            header="Nama Kegiatan"
+            style={{ minWidth: "12rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           ></Column>
           <Column
-            field="stok"
-            header="Stok (pcs)"
-            sortable
-            style={{ minWidth: "8rem" }}
+            field="pic"
+            header="PIC"
+            style={{ minWidth: "10rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
-          ></Column>
+          ></Column> */}
           <Column
             field="createdBy"
             header="Ditambahkan Oleh"
             body={userBodyTemplate}
-            style={{ minWidth: "10rem" }}
+            style={{ minWidth: "12rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           ></Column>
@@ -656,18 +620,18 @@ export default function TabelLogKeluar() {
         onHide={hideDialog}
       >
         <div className="field">
-          <label htmlFor="kode_produk" className="font-bold">
-            Kode Produk
+          <label htmlFor="nama_produk" className="font-bold">
+            Nama Produk
           </label>
           <Dropdown
-            value={product.kode_produk}
-            onChange={onProductCodeChange}
+            value={product.nama_produk}
+            onChange={onProductNameChange}
             options={
               isLoadingProducts
                 ? [{ label: "Memuat data...", value: null }]
                 : productList?.map((p) => ({
-                    label: `${p.kode_produk} - ${p.nama_produk} (Stok: ${p.stok})`,
-                    value: p.kode_produk,
+                    label: `${p.nama_produk} (Stok: ${p.stok})`,
+                    value: p.nama_produk,
                   }))
             }
             filter
@@ -676,10 +640,10 @@ export default function TabelLogKeluar() {
             placeholder={isLoadingProducts ? "Memuat..." : "Pilih Produk..."}
             disabled={isLoadingProducts}
             className={classNames("border border-slate-400 w-full", {
-              "p-invalid border-red-500": submitted && !product.kode_produk,
+              "p-invalid border-red-500": submitted && !product.nama_produk,
             })}
           />
-          {submitted && !product.kode_produk && (
+          {submitted && !product.nama_produk && (
             <small className="p-error">Pilih produk terlebih dahulu</small>
           )}
         </div>
@@ -708,45 +672,58 @@ export default function TabelLogKeluar() {
           )}
         </div>
 
-        <div className="formgrid grid">
-          <div className="field col">
-            <label htmlFor="harga" className="font-bold">
-              Harga
-            </label>
-            <InputNumber
-              id="harga"
-              value={product.harga}
-              onChange={(e) => onInputNumberChange(e, "harga")}
-              inputClassName={classNames(
-                "border border-slate-400 p-2 rounded-md",
-                {
-                  "p-invalid border-red-500": submitted && !product.harga,
-                }
-              )}
-            />
-            {submitted && !product.harga && (
-              <small className="p-error">Harga harus diisi</small>
+        <div className="field">
+          <label htmlFor="nama_kegiatan" className="font-bold">
+            Nama Kegiatan
+          </label>
+          <InputText
+            id="nama_kegiatan"
+            value={product.nama_kegiatan}
+            onChange={(e) => onInputChange(e, "nama_kegiatan")}
+            className={classNames("border border-slate-400 rounded-md p-2", {
+              "p-invalid border-red-500": submitted && !product.nama_kegiatan,
+            })}
+          />
+          {submitted && !product.nama_kegiatan && (
+            <small className="p-error">Nama kegiatan harus diisi</small>
+          )}
+        </div>
+
+        <div className="field">
+          <label htmlFor="pic" className="font-bold">
+            PIC (Penanggung Jawab)
+          </label>
+          <InputText
+            id="pic"
+            value={product.pic}
+            onChange={(e) => onInputChange(e, "pic")}
+            className={classNames("border border-slate-400 rounded-md p-2", {
+              "p-invalid border-red-500": submitted && !product.pic,
+            })}
+          />
+          {submitted && !product.pic && (
+            <small className="p-error">PIC harus diisi</small>
+          )}
+        </div>
+
+        <div className="field">
+          <label htmlFor="stok" className="font-bold">
+            Jumlah Barang Keluar
+          </label>
+          <InputNumber
+            id="stok"
+            value={product.stok}
+            onChange={(e) => onInputNumberChange(e, "stok")}
+            inputClassName={classNames(
+              "border border-slate-400 p-2 rounded-md",
+              {
+                "p-invalid border-red-500": submitted && !product.stok,
+              }
             )}
-          </div>
-          <div className="field col">
-            <label htmlFor="stok" className="font-bold">
-              Stok Keluar
-            </label>
-            <InputNumber
-              id="stok"
-              value={product.stok}
-              onChange={(e) => onInputNumberChange(e, "stok")}
-              inputClassName={classNames(
-                "border border-slate-400 p-2 rounded-md",
-                {
-                  "p-invalid border-red-500": submitted && !product.stok,
-                }
-              )}
-            />
-            {submitted && !product.stok && (
-              <small className="p-error">Stok keluar harus diisi</small>
-            )}
-          </div>
+          />
+          {submitted && !product.stok && (
+            <small className="p-error">Jumlah barang keluar harus diisi</small>
+          )}
         </div>
       </Dialog>
 

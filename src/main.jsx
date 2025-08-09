@@ -33,16 +33,16 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Dashboard />,
+        element: <BarangMasuk />,
       },
       {
         path: "/riwayat-produk",
         element: <RiwayatProduk />,
       },
-      {
-        path: "/barang-masuk",
-        element: <BarangMasuk />,
-      },
+      // {
+      //   path: "/barang-masuk",
+      //   element: <BarangMasuk />,
+      // },
       {
         path: "/barang-keluar",
         element: <BarangKeluar />,

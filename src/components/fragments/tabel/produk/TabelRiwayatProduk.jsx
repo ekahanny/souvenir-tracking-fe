@@ -9,42 +9,57 @@ import ProductService from "../../../../services/ProductService";
 import { Button } from "primereact/button";
 import CategoryService from "../../../../services/CategoryService";
 import { useNavigate } from "react-router-dom";
+import InLogProdService from "../../../../services/InLogProdService";
 
 export default function TabelRiwayatProduk() {
-  const [products, setProducts] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
 
+  // Filter configuration
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: {
+    nama_kegiatan: {
       operator: FilterOperator.AND,
       constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
     },
-    "products.nama_produk": {
+    tanggal: {
       operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    representative: { value: null, matchMode: FilterMatchMode.IN },
-    status: {
-      operator: FilterOperator.OR,
-      constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }],
+      constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
     },
   });
 
-  const fetchProducts = async () => {
+  const fetchLogs = async () => {
     try {
-      const response = await ProductService.getAllProducts();
-      const productList = response.Produk || [];
-      const products = productList.map((item) => ({
-        _id: item._id,
-        kode_produk: item ? item.kode_produk : "N/A",
-        nama_produk: item ? item.nama_produk : "N/A",
-        kategori: item ? item.kategori : "Unknown",
-      }));
-      setProducts(products);
+      const response = await InLogProdService.getAllLogProducts();
+      const logList = response.LogProduk || [];
+      console.log("Log list: ", logList);
+
+      // Fetch product details for each log
+      const logsWithProducts = await Promise.all(
+        logList.map(async (log) => {
+          try {
+            const productResponse = await ProductService.getProductById(
+              log.produk
+            );
+            return {
+              ...log,
+              productName:
+                productResponse.data?.nama_produk || "Unknown Product",
+            };
+          } catch (error) {
+            console.error("Error fetching product:", error);
+            return {
+              ...log,
+              productName: "Unknown Product",
+            };
+          }
+        })
+      );
+
+      setLogs(logsWithProducts);
     } catch (error) {
-      console.error("Gagal mengambil produk: ", error);
+      console.error("Gagal mengambil log produk: ", error);
     }
   };
 
@@ -63,7 +78,7 @@ export default function TabelRiwayatProduk() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchLogs();
     fetchCategories();
   }, []);
 
@@ -96,11 +111,12 @@ export default function TabelRiwayatProduk() {
     );
   };
 
-  const categoryBodyTemplate = (rowData) => {
-    const category = categories.find((cat) => {
-      return cat.id === rowData.kategori;
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
-    return category ? category.name : "Unknown";
   };
 
   const renderHeader = () => {
@@ -128,7 +144,7 @@ export default function TabelRiwayatProduk() {
     <div>
       <div className="card ml-1 mt-3 rounded-lg shadow-lg">
         <DataTable
-          value={products}
+          value={logs}
           dataKey="id"
           paginator
           rows={5}
@@ -153,28 +169,29 @@ export default function TabelRiwayatProduk() {
           stateKey="dt-state-demo-local"
           emptyMessage="Tidak ada data ditemukan."
         >
-          <Column
+          {/* <Column
             field="kode_produk"
             header="Kode Produk"
             style={{ width: "20%" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
-          />
+          /> */}
           <Column
-            field="nama_produk"
-            header="Nama Produk"
+            field="nama_kegiatan"
+            header="Nama Kegiatan"
             sortable
             style={{ width: "25%" }}
             className="border border-slate-300"
             headerClassName="border border-gray-300"
           />
           <Column
-            field="kategori"
-            header="Kategori Produk"
-            body={categoryBodyTemplate}
+            field="tanggal"
+            header="Tanggal Kegiatan"
+            body={(rowData) => formatDate(rowData.tanggal)}
             style={{ width: "15%" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
+            sortable
           />
           <Column
             header="Action"

@@ -13,9 +13,6 @@ import { useReactToPrint } from "react-to-print";
 import { ColumnGroup } from "primereact/columngroup";
 import { Row } from "primereact/row";
 import { LoadingSpinner } from "../components/elements/LoadingSpinner";
-import { TabView, TabPanel } from "primereact/tabview";
-import { classNames } from "primereact/utils";
-import StokService from "../services/StokService";
 
 export default function DetailRiwayatProduk() {
   const { id } = useParams();
@@ -25,8 +22,6 @@ export default function DetailRiwayatProduk() {
   const componentRef = useRef();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [productStok, setProductStok] = useState([]);
 
   const fetchDetailProduct = async () => {
     try {
@@ -72,16 +67,6 @@ export default function DetailRiwayatProduk() {
     }
   };
 
-  const fetchStokProdById = async (productId) => {
-    try {
-      const res = await StokService.getStokByProdukId(productId);
-      setProductStok(res.data || res);
-      console.log("Stok: ", res);
-    } catch (error) {
-      console.error("Error fetching stock data: ", error);
-    }
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -90,7 +75,6 @@ export default function DetailRiwayatProduk() {
           fetchDetailProduct(),
           fetchLogProduct(),
           fetchCategories(),
-          fetchStokProdById(id),
         ]);
       } catch (error) {
         console.error("Gagal mengambil data:", error);
@@ -157,8 +141,8 @@ export default function DetailRiwayatProduk() {
                       DETAIL RIWAYAT PRODUK
                     </h1>
 
-                    <div className="gap-6 mb-5 text-black text-lg ml-5">
-                      <div className="mt-5">
+                    <div className=" gap-6 mb-5 text-black text-lg ml-5">
+                      <div className="">
                         <span className="font-medium">Kode Produk:</span>{" "}
                         {product.kode_produk}
                       </div>
@@ -209,196 +193,133 @@ export default function DetailRiwayatProduk() {
                       </div>
                     </div>
 
-                    <TabView
-                      activeIndex={activeIndex}
-                      onTabChange={(e) => setActiveIndex(e.index)}
-                      className="custom-tabview"
-                    >
-                      {/* Tab 1 - Detail Produk */}
-                      <TabPanel
-                        header="Detail Produk"
-                        leftIcon="pi pi-history mr-2"
+                    <div className="center-table-wrapper overflow-x-auto mx-4">
+                      <DataTable
+                        value={logProduct}
+                        sortField="tanggal"
+                        sortOrder={1}
+                        tableStyle={{ minWidth: "100%" }}
+                        headerStyle={{ textAlign: "center" }}
+                        showFooter
+                        autoLayout
+                        className="text-sm"
+                        footerColumnGroup={
+                          <ColumnGroup>
+                            <Row>
+                              <Column
+                                footer="Total Transaksi"
+                                colSpan={4}
+                                footerClassName="font-bold border border-slate-400"
+                              />
+                              <Column
+                                footer={logProduct
+                                  .reduce((total, log) => {
+                                    const harga =
+                                      log.harga !== undefined
+                                        ? log.harga
+                                        : product.harga;
+                                    const amount = harga * log.stok;
+                                    // Barang keluar (pemasukan) ditambahkan, barang masuk (pengeluaran) dikurangi
+                                    return (
+                                      total +
+                                      (log.isProdukMasuk ? -amount : amount)
+                                    );
+                                  }, 0)
+                                  .toLocaleString("id-ID", {
+                                    style: "currency",
+                                    currency: "IDR",
+                                    minimumFractionDigits: 0,
+                                  })}
+                                footerClassName="font-bold border border-slate-400 text-center"
+                              />
+                            </Row>
+                          </ColumnGroup>
+                        }
                       >
-                        <div className="center-table-wrapper overflow-x-auto mx-4">
-                          <DataTable
-                            value={logProduct}
-                            sortField="tanggal"
-                            sortOrder={1}
-                            tableStyle={{ minWidth: "100%" }}
-                            headerStyle={{ textAlign: "center" }}
-                            showFooter
-                            autoLayout
-                            className="text-sm mt-5"
-                            footerColumnGroup={
-                              <ColumnGroup>
-                                <Row>
-                                  <Column
-                                    footer="Total Transaksi"
-                                    colSpan={4}
-                                    footerClassName="font-bold border border-slate-400"
-                                  />
-                                  <Column
-                                    footer={logProduct
-                                      .reduce((total, log) => {
-                                        const harga =
-                                          log.harga !== undefined
-                                            ? log.harga
-                                            : product.harga;
-                                        const amount = harga * log.stok;
-                                        return (
-                                          total +
-                                          (log.isProdukMasuk ? -amount : amount)
-                                        );
-                                      }, 0)
-                                      .toLocaleString("id-ID", {
-                                        style: "currency",
-                                        currency: "IDR",
-                                        minimumFractionDigits: 0,
-                                      })}
-                                    footerClassName="font-bold border border-slate-400 text-center"
-                                  />
-                                </Row>
-                              </ColumnGroup>
-                            }
-                          >
-                            <Column
-                              header="No."
-                              body={(_, { rowIndex }) => rowIndex + 1}
-                              className="border border-slate-400 text-center"
-                              headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                              headerStyle={{ textAlign: "center" }}
-                            />
-                            <Column
-                              field="tanggal"
-                              header="Tanggal"
-                              body={(rowData) => formatDate(rowData.tanggal)}
-                              className="border border-slate-400 text-center"
-                              headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                              headerStyle={{ textAlign: "center" }}
-                            />
-                            <Column
-                              field="isProdukMasuk"
-                              header="Jenis"
-                              body={(rowData) =>
+                        <Column
+                          header="No."
+                          body={(_, { rowIndex }) => rowIndex + 1}
+                          className="border border-slate-400 text-center"
+                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
+                          headerStyle={{ textAlign: "center" }}
+                        />
+                        <Column
+                          field="tanggal"
+                          header="Tanggal"
+                          body={(rowData) => formatDate(rowData.tanggal)}
+                          className="border border-slate-400 text-center"
+                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
+                          headerStyle={{ textAlign: "center" }}
+                        />
+                        <Column
+                          field="isProdukMasuk"
+                          header="Jenis"
+                          body={(rowData) =>
+                            rowData.isProdukMasuk
+                              ? "Barang Masuk"
+                              : "Barang Keluar"
+                          }
+                          className="border border-slate-400 text-center"
+                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
+                          headerStyle={{ textAlign: "center" }}
+                        />
+                        <Column
+                          field="stok"
+                          header="Jumlah"
+                          body={(rowData) => (
+                            <span
+                              className={
                                 rowData.isProdukMasuk
-                                  ? "Barang Masuk"
-                                  : "Barang Keluar"
+                                  ? "text-green-600"
+                                  : "text-red-600"
                               }
-                              className="border border-slate-400 text-center"
-                              headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                              headerStyle={{ textAlign: "center" }}
-                            />
-                            <Column
-                              field="stok"
-                              header="Jumlah"
-                              body={(rowData) => (
-                                <span
-                                  className={
-                                    rowData.isProdukMasuk
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }
-                                >
-                                  {rowData.isProdukMasuk ? "+" : "-"}
-                                  {rowData.stok}
-                                </span>
-                              )}
-                              className="border border-slate-400 text-center"
-                              headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                              headerStyle={{ textAlign: "center" }}
-                            />
-                            <Column
-                              field="stok"
-                              header="Riwayat Transaksi"
-                              body={(rowData) => {
-                                const hargaTransaksi = rowData.harga;
-                                const harga =
-                                  hargaTransaksi !== undefined
-                                    ? hargaTransaksi
-                                    : product.harga;
-
-                                const total = harga * rowData.stok;
-                                const isIncome = !rowData.isProdukMasuk;
-
-                                return (
-                                  <span
-                                    className={
-                                      isIncome
-                                        ? "text-green-600"
-                                        : "text-red-600"
-                                    }
-                                  >
-                                    {isIncome ? "+" : "-"}
-                                    {total.toLocaleString("id-ID", {
-                                      style: "currency",
-                                      currency: "IDR",
-                                      minimumFractionDigits: 0,
-                                    })}
-                                  </span>
-                                );
-                              }}
-                              className="border border-slate-400 text-center"
-                              headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                              headerStyle={{ textAlign: "center" }}
-                            />
-                          </DataTable>
-                        </div>
-                      </TabPanel>
-
-                      <TabPanel
-                        header="Tanggal Kadaluarsa"
-                        leftIcon="pi pi-info-circle mr-2"
-                      >
-                        <div className="mt-4 text-center">
-                          {productStok.length > 0 ? (
-                            <DataTable
-                              value={productStok.filter(
-                                (item) => item.stok > 0
-                              )}
-                              className="p-datatable-sm text-center"
-                              stripedRows
-                              showGridlines
-                              tableStyle={{ minWidth: "100%" }}
-                              headerStyle={{ textAlign: "center" }}
-                              autoLayout
                             >
-                              <Column
-                                field="stok"
-                                header="Jumlah Stok"
-                                body={(data) => `${data.stok} pcs`}
-                                style={{ width: "20%" }}
-                                className="border border-slate-400 text-center"
-                                headerClassName="border border-slate-400 bg-slate-200"
-                                align="center"
-                              />
-                              <Column
-                                field="tanggalKadaluarsa"
-                                header="Tanggal Kedaluwarsa"
-                                body={(data) =>
-                                  data.tanggalKadaluarsa
-                                    ? new Date(
-                                        data.tanggalKadaluarsa
-                                      ).toLocaleDateString("id-ID", {
-                                        day: "2-digit",
-                                        month: "long",
-                                        year: "numeric",
-                                      })
-                                    : "Tidak ada data"
-                                }
-                                style={{ width: "30%" }}
-                                className="border border-slate-400 text-center"
-                                headerClassName="border border-slate-400 bg-slate-200"
-                                align="center"
-                              />
-                            </DataTable>
-                          ) : (
-                            <div className="p-4 text-center text-gray-500">
-                              Tidak ada data stok tersedia
-                            </div>
+                              {rowData.isProdukMasuk ? "+" : "-"}
+                              {rowData.stok}
+                            </span>
                           )}
-                        </div>
-                      </TabPanel>
-                    </TabView>
+                          className="border border-slate-400 text-center"
+                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
+                          headerStyle={{ textAlign: "center" }}
+                        />
+                        {/* Data Riwayat Transaksi Per Baris */}
+                        <Column
+                          field="stok"
+                          header="Riwayat Transaksi"
+                          body={(rowData) => {
+                            // Ambil harga dari log produk (rowData), bukan dari product
+                            const hargaTransaksi = rowData.harga;
+
+                            // Jika harga tidak ada di log, fallback ke harga produk (opsional)
+                            const harga =
+                              hargaTransaksi !== undefined
+                                ? hargaTransaksi
+                                : product.harga;
+
+                            const total = harga * rowData.stok;
+                            const isIncome = !rowData.isProdukMasuk;
+
+                            return (
+                              <span
+                                className={
+                                  isIncome ? "text-green-600" : "text-red-600"
+                                }
+                              >
+                                {isIncome ? "+" : "-"}
+                                {total.toLocaleString("id-ID", {
+                                  style: "currency",
+                                  currency: "IDR",
+                                  minimumFractionDigits: 0,
+                                })}
+                              </span>
+                            );
+                          }}
+                          className="border border-slate-400 text-center"
+                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
+                          headerStyle={{ textAlign: "center" }}
+                        />
+                      </DataTable>
+                    </div>
                   </div>
                 )}
               </div>
