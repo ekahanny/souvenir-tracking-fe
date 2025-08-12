@@ -346,7 +346,7 @@ export default function TabelRingkasanProduk() {
           />
           <Column
             field="nama_produk"
-            header="Nama Produk"
+            header="Nama Barang"
             sortable
             style={{ width: "25%" }}
             className="border border-slate-300"
@@ -410,7 +410,7 @@ export default function TabelRingkasanProduk() {
           </div>
           <div className="field">
             <label htmlFor="nama_produk" className="font-bold">
-              Nama Produk
+              Nama Barang
             </label>
             <InputText
               id="nama_produk"
@@ -420,10 +420,10 @@ export default function TabelRingkasanProduk() {
               className={classNames("border border-slate-400 rounded-md p-2", {
                 "p-invalid border-red-500": submitted && !product.nama_produk,
               })}
-              placeholder="Isi Nama Produk..."
+              placeholder="Isi Nama Barang..."
             />
             {submitted && !product.nama_produk && (
-              <small className="p-error">Nama produk harus diisi.</small>
+              <small className="p-error">Nama barang harus diisi.</small>
             )}
           </div>
           <div className="field">

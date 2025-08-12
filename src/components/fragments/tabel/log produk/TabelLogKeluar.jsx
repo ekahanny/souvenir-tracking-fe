@@ -18,6 +18,7 @@ import ProductService from "../../../../services/ProductService";
 import * as XLSX from "xlsx";
 import { FilterMatchMode, FilterOperator } from "primereact/api";
 import UserService from "../../../../services/UserService";
+import KegiatanService from "../../../../services/KegiatanService";
 
 export default function TabelLogKeluar() {
   let emptyProduct = {
@@ -35,6 +36,8 @@ export default function TabelLogKeluar() {
   const [productList, setProductList] = useState([]);
   const [productDialog, setProductDialog] = useState(false);
   const [deleteLogProductDialog, setdeleteLogProductDialog] = useState(false);
+  const [kegiatan, setKegiatan] = useState([]);
+  const [showNewActivityFields, setShowNewActivityFields] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -111,10 +114,32 @@ export default function TabelLogKeluar() {
     }
   };
 
+  const fetchkegiatan = async () => {
+    try {
+      const response = await KegiatanService.getKegiatan();
+      console.log("API Response:", response); // Debugging
+
+      // Cek beberapa kemungkinan struktur response
+      const kegiatanData =
+        response.kegiatan ||
+        response.data?.kegiatan ||
+        response.data ||
+        response ||
+        [];
+      setKegiatan(kegiatanData);
+
+      console.log("Kegiatan state:", kegiatanData); // Debugging
+    } catch (error) {
+      console.error("Gagal mengambil kegiatan:", error);
+      setKegiatan([]); // Pastikan array kosong jika error
+    }
+  };
+
   useEffect(() => {
     fetchLogProducts();
     fetchCategories();
     fetchProducts();
+    fetchkegiatan();
   }, []);
 
   const openNew = () => {
@@ -127,6 +152,7 @@ export default function TabelLogKeluar() {
 
   const hideDialog = () => {
     setSubmitted(false);
+    setShowNewActivityFields(false);
     setProductDialog(false);
   };
 
@@ -166,7 +192,13 @@ export default function TabelLogKeluar() {
       return;
     }
 
-    if (!product.nama_kegiatan || !product.pic) {
+    if (
+      !product.nama_kegiatan ||
+      (!product.pic &&
+        !kegiatan.some(
+          (k) => k.nama_kegiatan === product.nama_kegiatan && k.pic
+        ))
+    ) {
       toast.current.show({
         severity: "warn",
         summary: "Peringatan",
@@ -174,6 +206,16 @@ export default function TabelLogKeluar() {
         life: 3000,
       });
       return;
+    }
+
+    // Jika PIC kosong tapi ada di data kegiatan, isi otomatis
+    if (!product.pic) {
+      const selectedKegiatan = kegiatan.find(
+        (k) => k.nama_kegiatan === product.nama_kegiatan
+      );
+      if (selectedKegiatan?.pic) {
+        setProduct((prev) => ({ ...prev, pic: selectedKegiatan.pic }));
+      }
     }
 
     const selectedProduct = productList.find(
@@ -262,10 +304,15 @@ export default function TabelLogKeluar() {
   };
 
   const editProduct = (product) => {
+    const kegiatanData = kegiatan.find(
+      (k) => k.nama_kegiatan === product.nama_kegiatan
+    );
+
     setProduct({
       ...product,
       tanggal: new Date(product.tanggal),
       kategori: product.kategori?.id || product.kategori,
+      pic: kegiatanData?.pic || product.pic || "",
     });
     setIsEditMode(true);
     setProductDialog(true);
@@ -310,7 +357,7 @@ export default function TabelLogKeluar() {
     }
 
     const excelData = products.map((product) => ({
-      "Nama Produk": product.nama_produk || "",
+      "Nama Barang": product.nama_produk || "",
       Kategori:
         categories.find((cat) => cat.id === product.kategori)?.name ||
         product.kategori ||
@@ -545,7 +592,7 @@ export default function TabelLogKeluar() {
         >
           <Column
             field="nama_produk"
-            header="Nama Produk"
+            header="Nama Barang"
             sortable
             style={{ minWidth: "16rem" }}
             className="border border-slate-300"
@@ -605,9 +652,115 @@ export default function TabelLogKeluar() {
         footer={productDialogFooter}
         onHide={hideDialog}
       >
+        {!showNewActivityFields ? (
+          <div className="field">
+            <label htmlFor="nama_kegiatan" className="font-bold">
+              Nama Kegiatan
+            </label>
+            <div className="flex gap-2">
+              <Dropdown
+                id="nama_kegiatan"
+                value={product.nama_kegiatan}
+                onChange={(e) => {
+                  const selectedKegiatan = kegiatan.find(
+                    (k) => k.nama_kegiatan === e.value
+                  );
+                  setProduct({
+                    ...product,
+                    nama_kegiatan: e.value,
+                    pic: selectedKegiatan?.pic || "", // Otomatis isi PIC dari data kegiatan
+                  });
+                }}
+                options={kegiatan.map((activity) => ({
+                  label: activity.nama_kegiatan || "Kegiatan Tanpa Nama",
+                  value: activity.nama_kegiatan || "",
+                }))}
+                placeholder={
+                  kegiatan.length === 0
+                    ? "Tidak ada kegiatan"
+                    : "Pilih Kegiatan"
+                }
+                className={classNames("border border-slate-400 w-full", {
+                  "p-invalid border-red-500":
+                    submitted && !product.nama_kegiatan,
+                })}
+              />
+              <Button
+                icon="pi pi-plus"
+                className="p-button-rounded p-button-outlined"
+                onClick={() => setShowNewActivityFields(true)}
+                tooltip="Tambah Kegiatan Baru"
+              />
+            </div>
+            {submitted && !product.nama_kegiatan && (
+              <small className="p-error">Nama kegiatan harus diisi</small>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="new_nama_kegiatan" className="font-bold">
+                Nama Kegiatan Baru
+              </label>
+              <InputText
+                id="new_nama_kegiatan"
+                value={product.nama_kegiatan}
+                onChange={(e) => onInputChange(e, "nama_kegiatan")}
+                className={classNames(
+                  "border border-slate-400 rounded-md p-2",
+                  {
+                    "p-invalid border-red-500":
+                      submitted && !product.nama_kegiatan,
+                  }
+                )}
+              />
+              {submitted && !product.nama_kegiatan && (
+                <small className="p-error">Nama kegiatan harus diisi</small>
+              )}
+            </div>
+
+            <div className="field">
+              <label htmlFor="pic" className="font-bold">
+                PIC (Penanggung Jawab)
+              </label>
+              <InputText
+                id="pic"
+                value={product.pic}
+                onChange={(e) => onInputChange(e, "pic")}
+                className={classNames(
+                  "border border-slate-400 rounded-md p-2",
+                  {
+                    "p-invalid border-red-500": submitted && !product.pic,
+                  }
+                )}
+              />
+              {submitted && !product.pic && (
+                <small className="p-error">PIC harus diisi</small>
+              )}
+            </div>
+          </>
+        )}
+
+        <div className="field">
+          <label htmlFor="tanggal_kegiatan" className="font-bold">
+            Tanggal Kegiatan
+          </label>
+          <Calendar
+            id="tanggal_kegiatan"
+            inputClassName={classNames(
+              "border border-slate-400 rounded-md p-2"
+            )}
+            className="bg-sky-300 rounded-md"
+            value={product.tanggal}
+            onChange={(e) => setProduct({ ...product, tanggal: e.value })}
+            showIcon
+            dateFormat="dd-mm-yy"
+          />
+        </div>
+
         <div className="field">
           <label htmlFor="nama_produk" className="font-bold">
-            Nama Produk
+            Nama Barang
           </label>
           <Dropdown
             value={product.nama_produk}
@@ -631,64 +784,6 @@ export default function TabelLogKeluar() {
           />
           {submitted && !product.nama_produk && (
             <small className="p-error">Pilih produk terlebih dahulu</small>
-          )}
-        </div>
-
-        <div className="field">
-          <label htmlFor="tanggal" className="font-bold">
-            Tanggal Keluar
-          </label>
-          <Calendar
-            id="tanggal"
-            inputClassName={classNames(
-              "border border-slate-400 rounded-md p-2",
-              {
-                "p-invalid border-red-500": submitted && !product.tanggal,
-              }
-            )}
-            className="bg-sky-300 rounded-md"
-            value={product.tanggal}
-            onChange={(e) => setProduct({ ...product, tanggal: e.value })}
-            showIcon
-            dateFormat="dd-mm-yy"
-            required
-          />
-          {submitted && !product.tanggal && (
-            <small className="p-error">Tanggal keluar harus diisi</small>
-          )}
-        </div>
-
-        <div className="field">
-          <label htmlFor="nama_kegiatan" className="font-bold">
-            Nama Kegiatan
-          </label>
-          <InputText
-            id="nama_kegiatan"
-            value={product.nama_kegiatan}
-            onChange={(e) => onInputChange(e, "nama_kegiatan")}
-            className={classNames("border border-slate-400 rounded-md p-2", {
-              "p-invalid border-red-500": submitted && !product.nama_kegiatan,
-            })}
-          />
-          {submitted && !product.nama_kegiatan && (
-            <small className="p-error">Nama kegiatan harus diisi</small>
-          )}
-        </div>
-
-        <div className="field">
-          <label htmlFor="pic" className="font-bold">
-            PIC (Penanggung Jawab)
-          </label>
-          <InputText
-            id="pic"
-            value={product.pic}
-            onChange={(e) => onInputChange(e, "pic")}
-            className={classNames("border border-slate-400 rounded-md p-2", {
-              "p-invalid border-red-500": submitted && !product.pic,
-            })}
-          />
-          {submitted && !product.pic && (
-            <small className="p-error">PIC harus diisi</small>
           )}
         </div>
 

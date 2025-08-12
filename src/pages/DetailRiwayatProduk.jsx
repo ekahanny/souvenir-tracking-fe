@@ -110,11 +110,11 @@ export default function DetailRiwayatKegiatan() {
           <NavBar />
 
           <div className="bg-white rounded-md shadow-lg border border-sky-200 mx-3 mb-3 mt-8 p-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 mt-3">
               <Button
                 label="Kembali"
                 icon="pi pi-arrow-left"
-                className="bg-sky-500 hover:bg-sky-600 text-white px-3 py-2"
+                className="bg-sky-500 hover:bg-sky-600 text-white ml-3 px-3 py-2"
                 onClick={() => navigate(-1)}
               />
               <h1 className="text-3xl text-sky-700 font-bold">

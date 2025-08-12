@@ -274,7 +274,7 @@ export default function TabelLogMasuk() {
     }
 
     const excelData = products.map((product) => ({
-      "Nama Produk": product.nama_produk || "",
+      "Nama Barang": product.nama_produk || "",
       Kategori:
         categories.find((cat) => cat.id === product.kategori)?.name ||
         product.kategori ||
@@ -525,7 +525,7 @@ export default function TabelLogMasuk() {
         >
           <Column
             field="nama_produk"
-            header="Nama Produk"
+            header="Nama Barang"
             sortable
             style={{ minWidth: "16rem" }}
             className="border border-slate-300"
@@ -579,7 +579,7 @@ export default function TabelLogMasuk() {
       >
         <div className="field">
           <label htmlFor="nama_produk" className="font-bold">
-            Nama Produk
+            Nama Barang
           </label>
           {showNewProductFields ? (
             <InputText
@@ -611,10 +611,10 @@ export default function TabelLogMasuk() {
           )}
 
           {showNewProductFields && submitted && !product.nama_produk && (
-            <small className="p-error">Nama produk harus diisi</small>
+            <small className="p-error">Nama barang harus diisi</small>
           )}
           {showNewProductFields && isProductExist && (
-            <small className="p-error">Produk telah tersedia</small>
+            <small className="p-error">Barang telah tersedia</small>
           )}
         </div>
 

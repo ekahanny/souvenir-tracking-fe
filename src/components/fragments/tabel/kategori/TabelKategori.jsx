@@ -488,7 +488,7 @@ export default function TabelKategori() {
         >
           <Column
             field="nama_produk"
-            header="Nama Produk"
+            header="Nama Barang"
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           />

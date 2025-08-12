@@ -16,14 +16,6 @@ export default function TabelRiwayatProduk() {
   // Filter configuration
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    nama_kegiatan: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }],
-    },
-    tanggal: {
-      operator: FilterOperator.AND,
-      constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }],
-    },
   });
 
   const fetchkegiatan = async () => {
@@ -57,9 +49,10 @@ export default function TabelRiwayatProduk() {
 
   const onGlobalFilterChange = (event) => {
     const value = event.target.value;
-    let _filters = { ...filters };
-    _filters["global"].value = value;
-    setFilters(_filters);
+    setFilters({
+      ...filters,
+      global: { value: value, matchMode: FilterMatchMode.CONTAINS },
+    });
   };
 
   const showDetailKegiatan = (rowData) => {
@@ -140,6 +133,7 @@ export default function TabelRiwayatProduk() {
           }}
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
           filters={filters}
+          globalFilterFields={["nama_kegiatan", "pic"]}
           header={header}
           tableClassName="border border-slate-300"
           tableStyle={{ minWidth: "50rem" }}
