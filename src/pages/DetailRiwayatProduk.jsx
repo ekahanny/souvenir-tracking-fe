@@ -13,10 +13,13 @@ export default function DetailRiwayatKegiatan() {
   const navigate = useNavigate();
   const [kegiatan, setKegiatan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchKegiatanDetail = async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const response = await KegiatanService.getKegiatanById(id);
 
       if (response.success) {
@@ -26,13 +29,18 @@ export default function DetailRiwayatKegiatan() {
       }
     } catch (error) {
       console.error("Error fetching kegiatan detail:", error);
+      setError(error.message || "Terjadi kesalahan saat memuat data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchKegiatanDetail();
+    const timer = setTimeout(() => {
+      fetchKegiatanDetail();
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, [id]);
 
   const formatDate = (dateString) => {
@@ -47,35 +55,51 @@ export default function DetailRiwayatKegiatan() {
     return (
       <div>
         <div className="font-semibold">{rowData.nama_produk}</div>
-        {/* <div className="text-sm text-gray-600">
-          Stok: {rowData.stok} {rowData.jenis_satuan}
-        </div> */}
       </div>
     );
   };
 
-  // const logBodyTemplate = (log) => {
-  //   return (
-  //     <div className="mb-2 p-2 border-b border-gray-200">
-  //       <div className="flex justify-between">
-  //         <span className="font-medium">Tanggal:</span>
-  //         <span>{formatDate(log.tanggal)}</span>
-  //       </div>
-  //       <div className="flex justify-between">
-  //         <span className="font-medium">Jumlah:</span>
-  //         <span
-  //           className={log.isProdukMasuk ? "text-green-600" : "text-red-600"}
-  //         >
-  //           {log.isProdukMasuk ? "+" : "-"}
-  //           {log.stok} {log.produk.jenis_satuan}
-  //         </span>
-  //       </div>
-  //     </div>
-  //   );
-  // };
-
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex bg-slate-200">
+        <SidebarComponent />
+        <div className="flex-1">
+          <div className="ml-[210px] mt-[60px] p-4 min-h-screen">
+            <NavBar />
+            <LoadingSpinner />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex bg-slate-200">
+        <SidebarComponent />
+        <div className="flex-1 min-h-screen">
+          <div className="ml-[210px] p-4">
+            <NavBar />
+            <div className="bg-white rounded-md shadow-lg p-6 text-center">
+              <h2 className="text-xl text-red-500">Gagal memuat data</h2>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Button
+                label="Coba Lagi"
+                icon="pi pi-refresh"
+                className="mt-4 bg-sky-500 hover:bg-sky-600 text-white"
+                onClick={fetchKegiatanDetail}
+              />
+              <Button
+                label="Kembali"
+                icon="pi pi-arrow-left"
+                className="mt-4 ml-2 bg-gray-500 hover:bg-gray-600 text-white"
+                onClick={() => navigate(-1)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!kegiatan) {
@@ -120,7 +144,7 @@ export default function DetailRiwayatKegiatan() {
               <h1 className="text-3xl text-sky-700 font-bold">
                 DETAIL KEGIATAN
               </h1>
-              <div></div> {/* Spacer untuk alignment */}
+              <div></div>
             </div>
 
             <div className="gap-6 mb-8 flex flex-col">
@@ -179,14 +203,12 @@ export default function DetailRiwayatKegiatan() {
                     },
                   }}
                   currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
-                  // filters={filters}
-                  // header={header}
                   tableClassName="border border-slate-300"
                   tableStyle={{ minWidth: "50rem" }}
-                  // onFilter={(e) => setFilters(e.filters)}
                   stateStorage="session"
                   stateKey="dt-state-demo-local"
                   emptyMessage="Tidak ada data ditemukan."
+                  loading={loading}
                 >
                   <Column
                     header="No"
@@ -220,22 +242,6 @@ export default function DetailRiwayatKegiatan() {
                 </DataTable>
               </div>
             </div>
-
-            {/* <div className="bg-gray-50 p-4 rounded-lg">
-              <h2 className="text-lg font-semibold mb-4 text-sky-700">
-                Riwayat Transaksi
-              </h2>
-              <div className="space-y-2">
-                {kegiatan.logs.map((log, index) => (
-                  <div
-                    key={index}
-                    className="p-3 border-b border-gray-200 hover:bg-gray-100"
-                  >
-                    {logBodyTemplate(log)}
-                  </div>
-                ))}
-              </div>
-            </div> */}
           </div>
         </div>
       </div>

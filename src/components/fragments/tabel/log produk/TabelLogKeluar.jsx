@@ -45,7 +45,6 @@ export default function TabelLogKeluar() {
   const [exportDialog, setExportDialog] = useState(false);
   const toast = useRef(null);
   const dt = useRef(null);
-  const [userMap, setUserMap] = useState({});
 
   const fetchLogProducts = async () => {
     try {
@@ -53,32 +52,18 @@ export default function TabelLogKeluar() {
       const productList =
         response.LogProduk.filter((item) => item.isProdukMasuk === false) || [];
 
-      const userPromises = productList.map((item) =>
-        item.createdBy
-          ? UserService.getUserById(item.createdBy)
-          : Promise.resolve(null)
-      );
-
-      const users = await Promise.all(userPromises);
-      const userMapping = {};
-      users.forEach((user, index) => {
-        if (user) {
-          userMapping[productList[index].createdBy] = user.nama || "Unknown";
-        }
+      const products = productList.map((item) => {
+        return {
+          _id: item._id,
+          nama_produk: item.produk ? item.produk.nama_produk : "N/A",
+          kategori: item.produk ? item.produk.kategori : "Unknown",
+          tanggal: item.tanggal,
+          stok: item.stok,
+          kegiatan: item.kegiatan?._id || null,
+          pic: item.pic || "",
+          createdBy: item.createdBy,
+        };
       });
-
-      setUserMap(userMapping);
-
-      const products = productList.map((item) => ({
-        _id: item._id,
-        nama_produk: item.produk ? item.produk.nama_produk : "N/A",
-        kategori: item.produk ? item.produk.kategori : "Unknown",
-        tanggal: item.tanggal,
-        stok: item.stok,
-        nama_kegiatan: item.nama_kegiatan || "",
-        pic: item.pic || "",
-        createdBy: item.createdBy,
-      }));
 
       setProducts(products);
     } catch (error) {
@@ -117,21 +102,16 @@ export default function TabelLogKeluar() {
   const fetchkegiatan = async () => {
     try {
       const response = await KegiatanService.getKegiatan();
-      console.log("API Response:", response); // Debugging
-
-      // Cek beberapa kemungkinan struktur response
-      const kegiatanData =
-        response.kegiatan ||
-        response.data?.kegiatan ||
-        response.data ||
-        response ||
-        [];
-      setKegiatan(kegiatanData);
-
-      console.log("Kegiatan state:", kegiatanData); // Debugging
+      const kegiatanData = response.kegiatan || [];
+      const formattedKegiatan = kegiatanData.map((item) => ({
+        id: item._id,
+        nama_kegiatan: item.nama_kegiatan || "Unknown",
+        pic: item.pic || "",
+      }));
+      setKegiatan(formattedKegiatan);
     } catch (error) {
       console.error("Gagal mengambil kegiatan:", error);
-      setKegiatan([]); // Pastikan array kosong jika error
+      setKegiatan([]);
     }
   };
 
@@ -416,8 +396,9 @@ export default function TabelLogKeluar() {
     });
   };
 
-  const userBodyTemplate = (rowData) => {
-    return userMap[rowData.createdBy] || "Unknown";
+  const kegiatanBodyTemplate = (rowData) => {
+    const kegiatanItem = kegiatan.find((k) => k.id === rowData.kegiatan);
+    return kegiatanItem ? kegiatanItem.nama_kegiatan : "Unknown";
   };
 
   const categoryBodyTemplate = (rowData) => {
@@ -623,13 +604,15 @@ export default function TabelLogKeluar() {
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           ></Column>
-          {/* <Column
-            field="nama_kegiatan"
+          <Column
+            field="kegiatan"
             header="Nama Kegiatan"
+            body={kegiatanBodyTemplate}
             style={{ minWidth: "12rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
-          ></Column> */}
+            sortable
+          />
           <Column
             header="Action"
             body={actionBodyTemplate}
@@ -692,7 +675,7 @@ export default function TabelLogKeluar() {
             {!showNewActivityFields && (
               <Button
                 icon="pi pi-plus"
-                className="p-button-text p-button-sm px-2.5 py-1.5 mt-1 text-sm border-1 border-sky-400 text-white bg-sky-400"
+                className="p-button-text p-button-sm px-2.5 py-1.5 mt-2.5 text-sm border-1 border-sky-400 text-white bg-sky-400"
                 onClick={() => setShowNewActivityFields(true)}
                 label="Tambah Kegiatan Baru"
               />
