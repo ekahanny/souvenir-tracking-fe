@@ -319,7 +319,7 @@ export default function TabelLogKeluar() {
       "Stok (pcs)": product.stok ? product.stok : 0,
       "Nama Kegiatan": product.nama_kegiatan || "",
       PIC: product.pic || "",
-      "Ditambahkan Oleh": userMap[product.createdBy] || "Unknown",
+      // "Ditambahkan Oleh": userMap[product.createdBy] || "Unknown",
     }));
 
     const ws = XLSX.utils.json_to_sheet(excelData);
@@ -577,27 +577,13 @@ export default function TabelLogKeluar() {
             headerClassName="border border-slate-300"
           ></Column>
           {/* <Column
-            field="nama_kegiatan"
-            header="Nama Kegiatan"
-            style={{ minWidth: "12rem" }}
-            className="border border-slate-300"
-            headerClassName="border border-slate-300"
-          ></Column>
-          <Column
-            field="pic"
-            header="PIC"
-            style={{ minWidth: "10rem" }}
-            className="border border-slate-300"
-            headerClassName="border border-slate-300"
-          ></Column> */}
-          <Column
             field="createdBy"
             header="Ditambahkan Oleh"
             body={userBodyTemplate}
             style={{ minWidth: "12rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
-          ></Column>
+          ></Column> */}
           <Column
             header="Action"
             body={actionBodyTemplate}

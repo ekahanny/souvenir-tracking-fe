@@ -5,15 +5,12 @@ import { IconField } from "primereact/iconfield";
 import { InputIcon } from "primereact/inputicon";
 import { InputText } from "primereact/inputtext";
 import { useEffect, useState } from "react";
-import ProductService from "../../../../services/ProductService";
 import { Button } from "primereact/button";
-import CategoryService from "../../../../services/CategoryService";
 import { useNavigate } from "react-router-dom";
-import InLogProdService from "../../../../services/InLogProdService";
+import KegiatanService from "../../../../services/KegiatanService";
 
 export default function TabelRiwayatProduk() {
-  const [logs, setLogs] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [kegiatan, setKegiatan] = useState([]);
   const navigate = useNavigate();
 
   // Filter configuration
@@ -29,57 +26,36 @@ export default function TabelRiwayatProduk() {
     },
   });
 
-  const fetchLogs = async () => {
+  const fetchkegiatan = async () => {
     try {
-      const response = await InLogProdService.getAllLogProducts();
-      const logList = response.LogProduk || [];
-      console.log("Log list: ", logList);
+      const response = await KegiatanService.getKegiatan();
+      const kegiatans = response.kegiatan || [];
 
-      // Fetch product details for each log
-      const logsWithProducts = await Promise.all(
-        logList.map(async (log) => {
-          try {
-            const productResponse = await ProductService.getProductById(
-              log.produk
-            );
-            return {
-              ...log,
-              productName:
-                productResponse.data?.nama_produk || "Unknown Product",
-            };
-          } catch (error) {
-            console.error("Error fetching product:", error);
-            return {
-              ...log,
-              productName: "Unknown Product",
-            };
-          }
-        })
-      );
+      // Format data untuk ditampilkan di tabel
+      const formattedKegiatan = kegiatans.map((keg) => {
+        // Ambil tanggal dari log pertama (jika ada)
+        const logDate =
+          keg.logs.length > 0 ? keg.logs[0].tanggal : keg.createdAt;
 
-      setLogs(logsWithProducts);
+        return {
+          _id: keg._id,
+          nama_kegiatan: keg.nama_kegiatan,
+          pic: keg.pic,
+          tanggal: logDate,
+          // produk: keg.produk,
+          // logs: keg.logs,
+        };
+      });
+
+      console.log("Formatted kegiatan:", formattedKegiatan);
+      setKegiatan(formattedKegiatan);
     } catch (error) {
       console.error("Gagal mengambil log produk: ", error);
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await CategoryService.getCategories();
-      const kategoriArray = response.KategoriProduk || [];
-      const formattedCategories = kategoriArray.map((item) => ({
-        name: item.nama,
-        id: item._id,
-      }));
-      setCategories(formattedCategories);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
-
   useEffect(() => {
-    fetchLogs();
-    fetchCategories();
+    fetchkegiatan();
   }, []);
 
   const onGlobalFilterChange = (event) => {
@@ -91,9 +67,12 @@ export default function TabelRiwayatProduk() {
 
   const showDetailProduct = (rowData) => {
     navigate(`/detail-riwayat/${rowData._id}`, {
-      state: { product: rowData },
+      state: {
+        kegiatan: rowData,
+        // produk: rowData.produk,
+        // logs: rowData.logs,
+      },
     });
-    // console.log(rowData);
   };
 
   const actionBodyTemplate = (rowData) => {
@@ -119,12 +98,26 @@ export default function TabelRiwayatProduk() {
     });
   };
 
+  // const produkBodyTemplate = (rowData) => {
+  //   return (
+  //     <div>
+  //       {rowData.produk.map((prod, index) => (
+  //         <div key={index} className="mb-1">
+  //           {prod.nama_produk} (
+  //           {rowData.logs.find((l) => l.produk._id === prod._id)?.stok || 0}{" "}
+  //           {prod.jenis_satuan})
+  //         </div>
+  //       ))}
+  //     </div>
+  //   );
+  // };
+
   const renderHeader = () => {
     const value = filters["global"] ? filters["global"].value : "";
 
     return (
       <div className="flex flex-wrap gap-2 align-items-center justify-content-between bg-slate-100 border border-slate-200">
-        <h4 className="ml-4 my-3 text-2xl text-sky-700">Riwayat Produk</h4>
+        <h4 className="ml-4 my-3 text-2xl text-sky-700">Riwayat Kegiatan</h4>
         <IconField iconPosition="left" className="border border-slate-400 w-96">
           <InputIcon className="pi pi-search ml-2" />
           <InputText
@@ -140,11 +133,12 @@ export default function TabelRiwayatProduk() {
   };
 
   const header = renderHeader();
+
   return (
     <div>
       <div className="card ml-1 mt-3 rounded-lg shadow-lg">
         <DataTable
-          value={logs}
+          value={kegiatan}
           dataKey="id"
           paginator
           rows={5}
@@ -169,21 +163,27 @@ export default function TabelRiwayatProduk() {
           stateKey="dt-state-demo-local"
           emptyMessage="Tidak ada data ditemukan."
         >
-          {/* <Column
-            field="kode_produk"
-            header="Kode Produk"
-            style={{ width: "20%" }}
-            className="border border-slate-300"
-            headerClassName="border border-slate-300"
-          /> */}
           <Column
             field="nama_kegiatan"
             header="Nama Kegiatan"
-            sortable
             style={{ width: "25%" }}
             className="border border-slate-300"
             headerClassName="border border-gray-300"
           />
+          <Column
+            field="pic"
+            header="PIC"
+            style={{ width: "15%" }}
+            className="border border-slate-300"
+            headerClassName="border border-gray-300"
+          />
+          {/* <Column
+            header="Produk"
+            body={produkBodyTemplate}
+            style={{ width: "30%" }}
+            className="border border-slate-300"
+            headerClassName="border border-gray-300"
+          /> */}
           <Column
             field="tanggal"
             header="Tanggal Kegiatan"
@@ -197,7 +197,7 @@ export default function TabelRiwayatProduk() {
             header="Action"
             body={actionBodyTemplate}
             exportable={false}
-            style={{ width: "10%" }}
+            style={{ width: "15%" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           />

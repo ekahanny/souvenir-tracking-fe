@@ -17,7 +17,6 @@ import InLogProdService from "../../../../services/InLogProdService";
 import ProductService from "../../../../services/ProductService";
 import * as XLSX from "xlsx";
 import { FilterMatchMode, FilterOperator } from "primereact/api";
-import UserService from "../../../../services/UserService";
 
 export default function TabelLogMasuk() {
   let emptyProduct = {
@@ -26,8 +25,6 @@ export default function TabelLogMasuk() {
     kategori: "",
     stok: 0,
     isProdukMasuk: true,
-    // nama_kegiatan: "",
-    // pic: "",
   };
 
   const [products, setProducts] = useState([]);
@@ -40,7 +37,6 @@ export default function TabelLogMasuk() {
   const [submitted, setSubmitted] = useState(false);
   const [exportDialog, setExportDialog] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [userMap, setUserMap] = useState({});
   const [showNewProductFields, setShowNewProductFields] = useState(false);
   const toast = useRef(null);
   const dt = useRef(null);
@@ -51,31 +47,12 @@ export default function TabelLogMasuk() {
       const productList =
         response.LogProduk.filter((item) => item.isProdukMasuk === true) || [];
 
-      const userPromises = productList.map((item) =>
-        item.createdBy
-          ? UserService.getUserById(item.createdBy)
-          : Promise.resolve(null)
-      );
-
-      const users = await Promise.all(userPromises);
-      const userMapping = {};
-      users.forEach((user, index) => {
-        if (user) {
-          userMapping[productList[index].createdBy] = user.nama || "Unknown";
-        }
-      });
-
-      setUserMap(userMapping);
-
       const products = productList.map((item) => ({
         _id: item._id,
         nama_produk: item.produk ? item.produk.nama_produk : "N/A",
         kategori: item.produk ? item.produk.kategori : "Unknown",
         tanggal: item.tanggal,
         stok: item.stok,
-        createdBy: item.createdBy,
-        // nama_kegiatan: item.nama_kegiatan || "",
-        // pic: item.pic || "",
       }));
 
       setProducts(products);
@@ -87,7 +64,7 @@ export default function TabelLogMasuk() {
   const fetchProducts = async () => {
     try {
       const response = await ProductService.getAllProducts();
-      setProductList(response.Produk);
+      setProductList(response.data);
     } catch (error) {
       console.error("Gagal mengambil produk: ", error);
     }
@@ -135,7 +112,6 @@ export default function TabelLogMasuk() {
   const saveProduct = async () => {
     setSubmitted(true);
 
-    // Validasi
     if (!product.nama_produk || !product.tanggal || !product.stok) {
       toast.current.show({
         severity: "warn",
@@ -146,7 +122,6 @@ export default function TabelLogMasuk() {
       return;
     }
 
-    // Jika mode tambah produk baru, pastikan produk belum ada
     if (showNewProductFields && isProductExist) {
       toast.current.show({
         severity: "error",
@@ -158,18 +133,17 @@ export default function TabelLogMasuk() {
     }
 
     try {
-      // Jika produk baru, buat dulu produknya
+      // Jika produk baru, tambahkan dulu ke master produk
       if (showNewProductFields) {
         await ProductService.addProduct({
           nama_produk: product.nama_produk,
           kategori: product.kategori,
-          stok: 0, // Mulai dari 0 karena akan ditambah via log
-          jenis_satuan: "pcs", // Default value, sesuaikan jika perlu
+          stok: 0,
+          jenis_satuan: "pcs",
         });
-        await fetchProducts(); // Refresh daftar produk
+        await fetchProducts();
       }
 
-      // Buat log produk
       const productData = {
         nama_produk: product.nama_produk,
         tanggal: new Date(product.tanggal).toISOString(),
@@ -178,12 +152,10 @@ export default function TabelLogMasuk() {
         isProdukMasuk: true,
       };
 
-      const addedProduct = await InLogProdService.addLogProduct(productData);
+      // Tambahkan ke log barang masuk
+      await InLogProdService.addLogProduct(productData);
 
-      // Update state
-      setProducts((prev) => [...prev, addedProduct]);
-
-      // Update stok produk
+      // Update stok produk yang sudah ada
       const currentProduct = productList.find(
         (p) => p.nama_produk === product.nama_produk
       );
@@ -192,8 +164,11 @@ export default function TabelLogMasuk() {
           ...currentProduct,
           stok: currentProduct.stok + product.stok,
         });
-        fetchProducts();
+        await fetchProducts();
       }
+
+      // Refresh daftar log produk supaya format konsisten
+      await fetchLogProducts();
 
       toast.current.show({
         severity: "success",
@@ -202,9 +177,11 @@ export default function TabelLogMasuk() {
         life: 3000,
       });
 
+      // Reset form & tutup dialog
       setProductDialog(false);
       setProduct(emptyProduct);
-      fetchLogProducts();
+      setShowNewProductFields(false);
+      setIsEditMode(false);
     } catch (error) {
       console.error("Gagal menambahkan log produk:", error);
       toast.current.show({
@@ -304,7 +281,6 @@ export default function TabelLogMasuk() {
         "",
       "Tanggal Masuk": product.tanggal ? formatDate(product.tanggal) : "",
       "Stok (pcs)": product.stok ? product.stok : 0,
-      "Ditambahkan Oleh": userMap[product.createdBy] || "Unknown",
     }));
 
     const ws = XLSX.utils.json_to_sheet(excelData);
@@ -347,7 +323,6 @@ export default function TabelLogMasuk() {
       [name]: val,
     }));
 
-    // Validasi hanya jika di mode input manual
     if (name === "nama_produk" && showNewProductFields) {
       validateProductExists(val);
     }
@@ -361,10 +336,6 @@ export default function TabelLogMasuk() {
     }));
   };
 
-  const userBodyTemplate = (rowData) => {
-    return userMap[rowData.createdBy] || "Unknown";
-  };
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
       year: "numeric",
@@ -376,9 +347,7 @@ export default function TabelLogMasuk() {
   const toggleNewProductFields = () => {
     setProduct({
       ...emptyProduct,
-      // Pertahankan tanggal jika sudah diisi
       tanggal: product.tanggal || emptyProduct.tanggal,
-      // Pertahankan stok jika sudah diisi
       stok: product.stok || emptyProduct.stok,
     });
     setShowNewProductFields(!showNewProductFields);
@@ -584,14 +553,6 @@ export default function TabelLogMasuk() {
             header="Jumlah Barang"
             sortable
             style={{ minWidth: "8rem" }}
-            className="border border-slate-300"
-            headerClassName="border border-slate-300"
-          ></Column>
-          <Column
-            field="createdBy"
-            header="Ditambahkan Oleh"
-            body={userBodyTemplate}
-            style={{ minWidth: "12rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
           ></Column>

@@ -84,7 +84,7 @@ export default function SidebarComponent() {
             </li>
             <li>
               <NavLink
-                to="/riwayat-produk"
+                to="/riwayat-kegiatan"
                 className={({ isActive }) =>
                   `flex items-center p-3 rounded text-black hover:bg-gray-200 w-full ${
                     isActive ? "bg-blue-300" : "bg-white"

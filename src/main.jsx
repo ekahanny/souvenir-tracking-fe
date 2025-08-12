@@ -35,10 +35,6 @@ const router = createBrowserRouter([
         path: "/",
         element: <BarangMasuk />,
       },
-      {
-        path: "/riwayat-produk",
-        element: <RiwayatProduk />,
-      },
       // {
       //   path: "/barang-masuk",
       //   element: <BarangMasuk />,
@@ -52,7 +48,11 @@ const router = createBrowserRouter([
         element: <Kategori />,
       },
       {
-        path: "/detail-riwayat/:id",
+        path: "/riwayat-kegiatan",
+        element: <RiwayatProduk />,
+      },
+      {
+        path: "/riwayat-kegiatan/:id",
         element: <DetailRiwayatProduk />,
       },
       {

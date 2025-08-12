@@ -33,10 +33,16 @@ const UserService = {
 
   getUserById: async (userId) => {
     try {
+      // Pastikan userId adalah string valid
+      if (!userId || typeof userId !== "string") {
+        console.error("Invalid user ID format");
+        return null;
+      }
+
       const res = await axiosInstance.get(`/users/${userId}`);
-      return res.data;
+      return res.data; // Pastikan ini mengembalikan objek user dengan properti 'nama'
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching user:", error);
       return null;
     }
   },
