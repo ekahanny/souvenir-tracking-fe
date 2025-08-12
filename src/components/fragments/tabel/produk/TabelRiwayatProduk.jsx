@@ -31,9 +31,7 @@ export default function TabelRiwayatProduk() {
       const response = await KegiatanService.getKegiatan();
       const kegiatans = response.kegiatan || [];
 
-      // Format data untuk ditampilkan di tabel
       const formattedKegiatan = kegiatans.map((keg) => {
-        // Ambil tanggal dari log pertama (jika ada)
         const logDate =
           keg.logs.length > 0 ? keg.logs[0].tanggal : keg.createdAt;
 
@@ -42,15 +40,14 @@ export default function TabelRiwayatProduk() {
           nama_kegiatan: keg.nama_kegiatan,
           pic: keg.pic,
           tanggal: logDate,
-          // produk: keg.produk,
-          // logs: keg.logs,
+          totalProduk: keg.produk.length,
+          totalStokKeluar: keg.logs.reduce((total, log) => total + log.stok, 0),
         };
       });
 
-      console.log("Formatted kegiatan:", formattedKegiatan);
       setKegiatan(formattedKegiatan);
     } catch (error) {
-      console.error("Gagal mengambil log produk: ", error);
+      console.error("Gagal mengambil kegiatan:", error);
     }
   };
 
@@ -65,14 +62,8 @@ export default function TabelRiwayatProduk() {
     setFilters(_filters);
   };
 
-  const showDetailProduct = (rowData) => {
-    navigate(`/detail-riwayat/${rowData._id}`, {
-      state: {
-        kegiatan: rowData,
-        // produk: rowData.produk,
-        // logs: rowData.logs,
-      },
-    });
+  const showDetailKegiatan = (rowData) => {
+    navigate(`/riwayat-kegiatan/${rowData._id}`);
   };
 
   const actionBodyTemplate = (rowData) => {
@@ -82,7 +73,7 @@ export default function TabelRiwayatProduk() {
           rounded
           size="small"
           className="bg-sky-400 hover:bg-sky-500 text-white text-sm px-3 py-2"
-          onClick={() => showDetailProduct(rowData)}
+          onClick={() => showDetailKegiatan(rowData)}
         >
           Show Detail
         </Button>
@@ -98,19 +89,13 @@ export default function TabelRiwayatProduk() {
     });
   };
 
-  // const produkBodyTemplate = (rowData) => {
-  //   return (
-  //     <div>
-  //       {rowData.produk.map((prod, index) => (
-  //         <div key={index} className="mb-1">
-  //           {prod.nama_produk} (
-  //           {rowData.logs.find((l) => l.produk._id === prod._id)?.stok || 0}{" "}
-  //           {prod.jenis_satuan})
-  //         </div>
-  //       ))}
-  //     </div>
-  //   );
-  // };
+  const produkBodyTemplate = (rowData) => {
+    return <div>{rowData.totalProduk} Produk</div>;
+  };
+
+  const stokBodyTemplate = (rowData) => {
+    return <div>{rowData.totalStokKeluar} pcs</div>;
+  };
 
   const renderHeader = () => {
     const value = filters["global"] ? filters["global"].value : "";
@@ -139,10 +124,10 @@ export default function TabelRiwayatProduk() {
       <div className="card ml-1 mt-3 rounded-lg shadow-lg">
         <DataTable
           value={kegiatan}
-          dataKey="id"
           paginator
           rows={5}
           rowsPerPageOptions={[5, 10, 25]}
+          dataKey="id"
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           pt={{
             paginator: {
@@ -166,6 +151,7 @@ export default function TabelRiwayatProduk() {
           <Column
             field="nama_kegiatan"
             header="Nama Kegiatan"
+            // sortable
             style={{ width: "25%" }}
             className="border border-slate-300"
             headerClassName="border border-gray-300"
@@ -173,14 +159,22 @@ export default function TabelRiwayatProduk() {
           <Column
             field="pic"
             header="PIC"
+            // sortable
             style={{ width: "15%" }}
             className="border border-slate-300"
             headerClassName="border border-gray-300"
           />
           {/* <Column
-            header="Produk"
+            header="Jumlah Produk"
             body={produkBodyTemplate}
-            style={{ width: "30%" }}
+            style={{ width: "15%" }}
+            className="border border-slate-300"
+            headerClassName="border border-gray-300"
+          />
+          <Column
+            header="Total Stok Keluar"
+            body={stokBodyTemplate}
+            style={{ width: "15%" }}
             className="border border-slate-300"
             headerClassName="border border-gray-300"
           /> */}

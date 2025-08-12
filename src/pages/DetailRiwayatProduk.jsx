@@ -1,107 +1,39 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import ProductService from "../services/ProductService";
-import InLogProdService from "../services/InLogProdService";
-import SidebarComponent from "../components/elements/Sidebar";
-import { NavBar } from "../components/elements/NavBar";
-import CategoryService from "../services/CategoryService";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import KegiatanService from "../services/KegiatanService";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-import { useReactToPrint } from "react-to-print";
-import { ColumnGroup } from "primereact/columngroup";
-import { Row } from "primereact/row";
+import SidebarComponent from "../components/elements/Sidebar";
+import { NavBar } from "../components/elements/NavBar";
 import { LoadingSpinner } from "../components/elements/LoadingSpinner";
 
-export default function DetailRiwayatProduk() {
+export default function DetailRiwayatKegiatan() {
   const { id } = useParams();
-  const [product, setProduct] = useState(null);
-  const [logProduct, setLogProduct] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const componentRef = useRef();
   const navigate = useNavigate();
+  const [kegiatan, setKegiatan] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchDetailProduct = async () => {
+  const fetchKegiatanDetail = async () => {
     try {
-      const response = await ProductService.getProductById(id);
-      if (response._id) {
-        setProduct(response);
-      } else if (response.Produk) {
-        setProduct(response.Produk);
+      setLoading(true);
+      const response = await KegiatanService.getKegiatanById(id);
+
+      if (response.success) {
+        setKegiatan(response.data);
       } else {
-        throw new Error("Struktur response tidak dikenali");
+        throw new Error("Gagal mengambil detail kegiatan");
       }
-      console.log("Product data:", response);
     } catch (error) {
-      console.error("Gagal mengambil produk:", error);
-    }
-  };
-
-  const fetchLogProduct = async () => {
-    try {
-      const response = await InLogProdService.getAllLogProducts();
-
-      const filteredLogs = response.LogProduk.filter(
-        (log) => log.produk?._id === id
-      );
-      setLogProduct(filteredLogs);
-      console.log("Response API Log Produk: ", filteredLogs);
-    } catch (error) {
-      console.error("Gagal mengambil log produk: ", error);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const response = await CategoryService.getCategories();
-      const kategoriArray = response.KategoriProduk || [];
-      const formattedCategories = kategoriArray.map((item) => ({
-        name: item.nama,
-        id: item._id,
-      }));
-      setCategories(formattedCategories);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
+      console.error("Error fetching kegiatan detail:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        await Promise.all([
-          fetchDetailProduct(),
-          fetchLogProduct(),
-          fetchCategories(),
-        ]);
-      } catch (error) {
-        console.error("Gagal mengambil data:", error);
-      } finally {
-        setTimeout(() => {
-          setLoading(false);
-        }, 1000);
-      }
-    };
-    fetchData();
+    fetchKegiatanDetail();
   }, [id]);
-
-  const getCategoryName = (categoryId) => {
-    const category = categories.find((cat) => cat.id === categoryId);
-    return category ? category.name : "Unknown";
-  };
-
-  const getSeverity = (stok) => {
-    switch (true) {
-      case stok <= 10:
-        return "danger";
-      case stok <= 50:
-        return "warning";
-      default:
-        return "success";
-    }
-  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -111,6 +43,65 @@ export default function DetailRiwayatProduk() {
     });
   };
 
+  const produkBodyTemplate = (rowData) => {
+    return (
+      <div>
+        <div className="font-semibold">{rowData.nama_produk}</div>
+        {/* <div className="text-sm text-gray-600">
+          Stok: {rowData.stok} {rowData.jenis_satuan}
+        </div> */}
+      </div>
+    );
+  };
+
+  // const logBodyTemplate = (log) => {
+  //   return (
+  //     <div className="mb-2 p-2 border-b border-gray-200">
+  //       <div className="flex justify-between">
+  //         <span className="font-medium">Tanggal:</span>
+  //         <span>{formatDate(log.tanggal)}</span>
+  //       </div>
+  //       <div className="flex justify-between">
+  //         <span className="font-medium">Jumlah:</span>
+  //         <span
+  //           className={log.isProdukMasuk ? "text-green-600" : "text-red-600"}
+  //         >
+  //           {log.isProdukMasuk ? "+" : "-"}
+  //           {log.stok} {log.produk.jenis_satuan}
+  //         </span>
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!kegiatan) {
+    return (
+      <div className="flex bg-slate-200">
+        <SidebarComponent />
+        <div className="flex-1 min-h-screen">
+          <div className="ml-[210px] p-4">
+            <NavBar />
+            <div className="bg-white rounded-md shadow-lg p-6 text-center">
+              <h2 className="text-xl text-red-500">
+                Data kegiatan tidak ditemukan
+              </h2>
+              <Button
+                label="Kembali"
+                icon="pi pi-arrow-left"
+                className="mt-4 bg-sky-500 hover:bg-sky-600 text-white"
+                onClick={() => navigate(-1)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex bg-slate-200">
       <SidebarComponent />
@@ -118,213 +109,134 @@ export default function DetailRiwayatProduk() {
         <div className="ml-[210px] p-4">
           <NavBar />
 
-          {loading ? (
-            <LoadingSpinner />
-          ) : (
-            <>
-              <div className="flex justify-between items-center mt-7 mb-4 ml-4">
-                <Button
-                  label="Kembali"
-                  icon="pi pi-angle-double-left"
-                  className="bg-sky-500 hover:bg-sky-600 text-white px-3 py-2"
-                  onClick={() => navigate(-1)}
-                />
-              </div>
+          <div className="bg-white rounded-md shadow-lg border border-sky-200 mx-3 mb-3 mt-8 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <Button
+                label="Kembali"
+                icon="pi pi-arrow-left"
+                className="bg-sky-500 hover:bg-sky-600 text-white px-3 py-2"
+                onClick={() => navigate(-1)}
+              />
+              <h1 className="text-3xl text-sky-700 font-bold">
+                DETAIL KEGIATAN
+              </h1>
+              <div></div> {/* Spacer untuk alignment */}
+            </div>
 
-              <div
-                ref={componentRef}
-                className="bg-white rounded-md shadow-lg border border-sky-200 mb-3 mx-3"
-              >
-                {product && (
-                  <div className="p-6">
-                    <h1 className="text-3xl text-sky-700 font-bold text-center mt-3 mb-4">
-                      DETAIL RIWAYAT PRODUK
-                    </h1>
-
-                    <div className=" gap-6 mb-5 text-black text-lg ml-5">
-                      <div className="">
-                        <span className="font-medium">Kode Produk:</span>{" "}
-                        {product.kode_produk}
-                      </div>
-                      <div>
-                        <span className="font-medium">Nama Produk:</span>{" "}
-                        {product.nama_produk}
-                      </div>
-                      <div>
-                        <span className="font-medium">Kategori:</span>{" "}
-                        {getCategoryName(product.kategori)}
-                      </div>
-                      <div>
-                        <span className="font-medium">
-                          Total Jumlah Produk:
-                        </span>{" "}
-                        {product.stok}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">Status:</span>
-                        {(() => {
-                          const severity = getSeverity(product?.stok || 0);
-                          const statusConfig = {
-                            danger: {
-                              text: "Stok Kurang",
-                              color: "bg-red-500",
-                            },
-                            warning: {
-                              text: "Stok Menipis",
-                              color: "bg-yellow-500",
-                            },
-                            success: {
-                              text: "Stok Aman",
-                              color: "bg-green-500",
-                            },
-                          };
-
-                          const config = statusConfig[severity];
-
-                          return (
-                            <>
-                              <div
-                                className={`p-2 rounded-full ${config.color} animate-pulse`}
-                              ></div>
-                              <span> {config.text}</span>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    <div className="center-table-wrapper overflow-x-auto mx-4">
-                      <DataTable
-                        value={logProduct}
-                        sortField="tanggal"
-                        sortOrder={1}
-                        tableStyle={{ minWidth: "100%" }}
-                        headerStyle={{ textAlign: "center" }}
-                        showFooter
-                        autoLayout
-                        className="text-sm"
-                        footerColumnGroup={
-                          <ColumnGroup>
-                            <Row>
-                              <Column
-                                footer="Total Transaksi"
-                                colSpan={4}
-                                footerClassName="font-bold border border-slate-400"
-                              />
-                              <Column
-                                footer={logProduct
-                                  .reduce((total, log) => {
-                                    const harga =
-                                      log.harga !== undefined
-                                        ? log.harga
-                                        : product.harga;
-                                    const amount = harga * log.stok;
-                                    // Barang keluar (pemasukan) ditambahkan, barang masuk (pengeluaran) dikurangi
-                                    return (
-                                      total +
-                                      (log.isProdukMasuk ? -amount : amount)
-                                    );
-                                  }, 0)
-                                  .toLocaleString("id-ID", {
-                                    style: "currency",
-                                    currency: "IDR",
-                                    minimumFractionDigits: 0,
-                                  })}
-                                footerClassName="font-bold border border-slate-400 text-center"
-                              />
-                            </Row>
-                          </ColumnGroup>
-                        }
-                      >
-                        <Column
-                          header="No."
-                          body={(_, { rowIndex }) => rowIndex + 1}
-                          className="border border-slate-400 text-center"
-                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                          headerStyle={{ textAlign: "center" }}
-                        />
-                        <Column
-                          field="tanggal"
-                          header="Tanggal"
-                          body={(rowData) => formatDate(rowData.tanggal)}
-                          className="border border-slate-400 text-center"
-                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                          headerStyle={{ textAlign: "center" }}
-                        />
-                        <Column
-                          field="isProdukMasuk"
-                          header="Jenis"
-                          body={(rowData) =>
-                            rowData.isProdukMasuk
-                              ? "Barang Masuk"
-                              : "Barang Keluar"
-                          }
-                          className="border border-slate-400 text-center"
-                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                          headerStyle={{ textAlign: "center" }}
-                        />
-                        <Column
-                          field="stok"
-                          header="Jumlah"
-                          body={(rowData) => (
-                            <span
-                              className={
-                                rowData.isProdukMasuk
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                              }
-                            >
-                              {rowData.isProdukMasuk ? "+" : "-"}
-                              {rowData.stok}
-                            </span>
-                          )}
-                          className="border border-slate-400 text-center"
-                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                          headerStyle={{ textAlign: "center" }}
-                        />
-                        {/* Data Riwayat Transaksi Per Baris */}
-                        <Column
-                          field="stok"
-                          header="Riwayat Transaksi"
-                          body={(rowData) => {
-                            // Ambil harga dari log produk (rowData), bukan dari product
-                            const hargaTransaksi = rowData.harga;
-
-                            // Jika harga tidak ada di log, fallback ke harga produk (opsional)
-                            const harga =
-                              hargaTransaksi !== undefined
-                                ? hargaTransaksi
-                                : product.harga;
-
-                            const total = harga * rowData.stok;
-                            const isIncome = !rowData.isProdukMasuk;
-
-                            return (
-                              <span
-                                className={
-                                  isIncome ? "text-green-600" : "text-red-600"
-                                }
-                              >
-                                {isIncome ? "+" : "-"}
-                                {total.toLocaleString("id-ID", {
-                                  style: "currency",
-                                  currency: "IDR",
-                                  minimumFractionDigits: 0,
-                                })}
-                              </span>
-                            );
-                          }}
-                          className="border border-slate-400 text-center"
-                          headerClassName="border border-slate-400 bg-slate-200 !text-center"
-                          headerStyle={{ textAlign: "center" }}
-                        />
-                      </DataTable>
-                    </div>
+            <div className="gap-6 mb-8 flex flex-col">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h2 className="text-xl font-semibold mb-4 text-sky-700">
+                  Informasi Kegiatan
+                </h2>
+                <div className="space-y-2 text-black text-lg">
+                  <div className="flex space-x-2">
+                    <span className="font-medium">Nama Kegiatan:</span>
+                    <span>{kegiatan.nama_kegiatan}</span>
                   </div>
-                )}
+                  <div className="flex space-x-2">
+                    <span className="font-medium">PIC:</span>
+                    <span>{kegiatan.pic}</span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <span className="font-medium">Tanggal Kegiatan:</span>
+                    <span>{formatDate(kegiatan.createdAt)}</span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <span className="font-medium">Jumlah Produk:</span>
+                    <span>{kegiatan.produk.length} item</span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <span className="font-medium">Total Stok Keluar:</span>
+                    <span className="text-red-600">
+                      {kegiatan.logs.reduce(
+                        (total, log) => total + log.stok,
+                        0
+                      )}{" "}
+                      pcs
+                    </span>
+                  </div>
+                </div>
               </div>
-            </>
-          )}
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h2 className="text-xl font-semibold mb-4 text-sky-700">
+                  Daftar Barang
+                </h2>
+                <DataTable
+                  value={kegiatan.produk}
+                  paginator
+                  rows={5}
+                  rowsPerPageOptions={[5, 10]}
+                  dataKey="id"
+                  paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                  pt={{
+                    paginator: {
+                      root: { className: "bg-gray-100 p-2" },
+                      pageButton: ({ context }) =>
+                        context.active
+                          ? { className: "bg-sky-500 text-white font-bold" }
+                          : { className: "text-gray-700 hover:bg-gray-200" },
+                    },
+                  }}
+                  currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
+                  // filters={filters}
+                  // header={header}
+                  tableClassName="border border-slate-300"
+                  tableStyle={{ minWidth: "50rem" }}
+                  // onFilter={(e) => setFilters(e.filters)}
+                  stateStorage="session"
+                  stateKey="dt-state-demo-local"
+                  emptyMessage="Tidak ada data ditemukan."
+                >
+                  <Column
+                    header="No"
+                    body={(_, { rowIndex }) => rowIndex + 1}
+                    style={{ width: "10%" }}
+                    className="border border-slate-300"
+                    headerClassName="border border-gray-300"
+                  />
+                  <Column
+                    field="nama_produk"
+                    header="Barang"
+                    body={produkBodyTemplate}
+                    style={{ width: "60%" }}
+                    className="border border-slate-300"
+                    headerClassName="border border-gray-300"
+                  />
+                  <Column
+                    header="Stok Keluar"
+                    body={(rowData) => (
+                      <span className="text-red-600">
+                        {kegiatan.logs
+                          .filter((log) => log.produk._id === rowData._id)
+                          .reduce((total, log) => total + log.stok, 0)}{" "}
+                        {rowData.jenis_satuan}
+                      </span>
+                    )}
+                    style={{ width: "30%" }}
+                    className="border border-slate-300"
+                    headerClassName="border border-gray-300"
+                  />
+                </DataTable>
+              </div>
+            </div>
+
+            {/* <div className="bg-gray-50 p-4 rounded-lg">
+              <h2 className="text-lg font-semibold mb-4 text-sky-700">
+                Riwayat Transaksi
+              </h2>
+              <div className="space-y-2">
+                {kegiatan.logs.map((log, index) => (
+                  <div
+                    key={index}
+                    className="p-3 border-b border-gray-200 hover:bg-gray-100"
+                  >
+                    {logBodyTemplate(log)}
+                  </div>
+                ))}
+              </div>
+            </div> */}
+          </div>
         </div>
       </div>
     </div>
