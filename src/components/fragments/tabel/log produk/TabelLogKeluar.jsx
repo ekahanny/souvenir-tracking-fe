@@ -624,9 +624,8 @@ export default function TabelLogKeluar() {
             headerClassName="border border-slate-300"
           ></Column>
           {/* <Column
-            field="createdBy"
-            header="Ditambahkan Oleh"
-            body={userBodyTemplate}
+            field="nama_kegiatan"
+            header="Nama Kegiatan"
             style={{ minWidth: "12rem" }}
             className="border border-slate-300"
             headerClassName="border border-slate-300"
@@ -685,15 +684,18 @@ export default function TabelLogKeluar() {
                     submitted && !product.nama_kegiatan,
                 })}
               />
-              <Button
-                icon="pi pi-plus"
-                className="p-button-rounded p-button-outlined"
-                onClick={() => setShowNewActivityFields(true)}
-                tooltip="Tambah Kegiatan Baru"
-              />
             </div>
             {submitted && !product.nama_kegiatan && (
               <small className="p-error">Nama kegiatan harus diisi</small>
+            )}
+
+            {!showNewActivityFields && (
+              <Button
+                icon="pi pi-plus"
+                className="p-button-text p-button-sm px-2.5 py-1.5 mt-1 text-sm border-1 border-sky-400 text-white bg-sky-400"
+                onClick={() => setShowNewActivityFields(true)}
+                label="Tambah Kegiatan Baru"
+              />
             )}
           </div>
         ) : (
