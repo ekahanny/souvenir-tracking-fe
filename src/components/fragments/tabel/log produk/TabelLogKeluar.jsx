@@ -17,7 +17,6 @@ import InLogProdService from "../../../../services/InLogProdService";
 import ProductService from "../../../../services/ProductService";
 import * as XLSX from "xlsx";
 import { FilterMatchMode, FilterOperator } from "primereact/api";
-import UserService from "../../../../services/UserService";
 import KegiatanService from "../../../../services/KegiatanService";
 
 export default function TabelLogKeluar() {
@@ -107,6 +106,7 @@ export default function TabelLogKeluar() {
         id: item._id,
         nama_kegiatan: item.nama_kegiatan || "Unknown",
         pic: item.pic || "",
+        tanggal: item.tanggal || item.createdAt,
       }));
       setKegiatan(formattedKegiatan);
     } catch (error) {
@@ -264,6 +264,7 @@ export default function TabelLogKeluar() {
       setProductDialog(false);
       setProduct(emptyProduct);
       fetchLogProducts();
+      fetchkegiatan();
     } catch (error) {
       console.error(
         isEditMode ? "Gagal mengupdate produk:" : "Gagal menambahkan produk:",
@@ -285,12 +286,13 @@ export default function TabelLogKeluar() {
 
   const editProduct = (product) => {
     const kegiatanData = kegiatan.find(
-      (k) => k.nama_kegiatan === product.nama_kegiatan
+      (k) =>
+        k.id === product.kegiatan || k.nama_kegiatan === product.nama_kegiatan
     );
 
     setProduct({
       ...product,
-      tanggal: new Date(product.tanggal),
+      tanggal: kegiatanData?.tanggal || new Date(product.tanggal),
       kategori: product.kategori?.id || product.kategori,
       pic: kegiatanData?.pic || product.pic || "",
     });
@@ -650,7 +652,8 @@ export default function TabelLogKeluar() {
                   setProduct({
                     ...product,
                     nama_kegiatan: e.value,
-                    pic: selectedKegiatan?.pic || "", // Otomatis isi PIC dari data kegiatan
+                    pic: selectedKegiatan?.pic || "",
+                    tanggal: selectedKegiatan?.tanggal || new Date(),
                   });
                 }}
                 options={kegiatan.map((activity) => ({
@@ -723,25 +726,33 @@ export default function TabelLogKeluar() {
                 <small className="p-error">PIC harus diisi</small>
               )}
             </div>
+
+            <div className="field">
+              <label htmlFor="tanggal_kegiatan" className="font-bold">
+                Tanggal Kegiatan
+              </label>
+              {showNewActivityFields ? (
+                <Calendar
+                  id="tanggal_kegiatan"
+                  inputClassName={classNames(
+                    "border border-slate-400 rounded-md p-2"
+                  )}
+                  className="bg-sky-300 rounded-md"
+                  value={product.tanggal}
+                  onChange={(e) => setProduct({ ...product, tanggal: e.value })}
+                  showIcon
+                  dateFormat="dd-mm-yy"
+                />
+              ) : (
+                <div className="p-2 border border-slate-300 rounded-md bg-gray-100">
+                  {product.tanggal
+                    ? formatDate(product.tanggal)
+                    : "Pilih kegiatan terlebih dahulu"}
+                </div>
+              )}
+            </div>
           </>
         )}
-
-        <div className="field">
-          <label htmlFor="tanggal_kegiatan" className="font-bold">
-            Tanggal Kegiatan
-          </label>
-          <Calendar
-            id="tanggal_kegiatan"
-            inputClassName={classNames(
-              "border border-slate-400 rounded-md p-2"
-            )}
-            className="bg-sky-300 rounded-md"
-            value={product.tanggal}
-            onChange={(e) => setProduct({ ...product, tanggal: e.value })}
-            showIcon
-            dateFormat="dd-mm-yy"
-          />
-        </div>
 
         <div className="field">
           <label htmlFor="nama_produk" className="font-bold">
