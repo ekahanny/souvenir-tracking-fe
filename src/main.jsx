@@ -3,7 +3,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { Dashboard } from "./pages/Dashboard.jsx";
 import { BarangMasuk } from "./pages/BarangMasuk.jsx";
 import { BarangKeluar } from "./pages/BarangKeluar.jsx";
 import { PrimeReactProvider } from "primereact/api";
@@ -18,6 +17,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import ProtectedRoute from "../src/components/fragments/auth/ProtectedRoute.jsx";
 import UserProfile from "./pages/UserProfile.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import { RingkasanProduk } from "./pages/RingkasanProduk.jsx";
 
 const router = createBrowserRouter([
   {
@@ -33,12 +33,12 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
+        element: <RingkasanProduk />,
+      },
+      {
+        path: "/barang-masuk",
         element: <BarangMasuk />,
       },
-      // {
-      //   path: "/barang-masuk",
-      //   element: <BarangMasuk />,
-      // },
       {
         path: "/barang-keluar",
         element: <BarangKeluar />,

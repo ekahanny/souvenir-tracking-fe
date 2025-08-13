@@ -19,7 +19,6 @@ import InLogProdService from "../../../../services/InLogProdService";
 export default function TabelRingkasanProduk() {
   let emptyProduct = {
     _id: "",
-    kode_produk: "",
     nama_produk: "",
     stok: 0,
     kategori: "",
@@ -54,12 +53,11 @@ export default function TabelRingkasanProduk() {
   const fetchProducts = async () => {
     try {
       const response = await ProductService.getAllProducts();
-      const productList = response.Produk || [];
+      const productList = response.data || [];
       const products = productList.map((item) => ({
         _id: item._id,
-        kode_produk: item ? item.kode_produk : "N/A",
         nama_produk: item ? item.nama_produk : "N/A",
-        kategori: item ? item.kategori : "Unknown",
+        kategori: item.kategori?._id || item.kategori || "Unknown",
         stok: item.stok,
       }));
       setProducts(products);
@@ -239,7 +237,7 @@ export default function TabelRingkasanProduk() {
 
     return (
       <div className="flex flex-wrap gap-2 align-items-center justify-content-between bg-slate-100 border border-slate-200">
-        <h4 className="ml-4 my-3 text-2xl text-sky-700">Ringkasan Produk</h4>
+        <h4 className="ml-4 my-3 text-2xl text-sky-700">Ringkasan Barang</h4>
         <IconField iconPosition="left" className="border border-slate-400 w-96">
           <InputIcon className="pi pi-search ml-2" />
           <InputText
@@ -338,13 +336,6 @@ export default function TabelRingkasanProduk() {
           emptyMessage="Tidak ada data ditemukan."
         >
           <Column
-            field="kode_produk"
-            header="Kode Produk"
-            style={{ width: "20%" }}
-            className="border border-slate-300"
-            headerClassName="border border-slate-300"
-          />
-          <Column
             field="nama_produk"
             header="Nama Barang"
             sortable
@@ -389,25 +380,6 @@ export default function TabelRingkasanProduk() {
           footer={productDialogFooter}
           onHide={() => setProductDialog(false)}
         >
-          <div className="field">
-            <label htmlFor="kode_produk" className="font-bold">
-              Kode Produk
-            </label>
-            <InputText
-              id="kode_produk"
-              value={product.kode_produk}
-              onChange={(e) => onInputChange(e, "kode_produk")}
-              required
-              autoFocus
-              className={classNames("border border-slate-400 rounded-md p-2", {
-                "p-invalid border-red-500": submitted && !product.kode_produk,
-              })}
-              placeholder="Isi Kode Produk..."
-            />
-            {submitted && !product.kode_produk && (
-              <small className="p-error">Kode produk harus diisi.</small>
-            )}
-          </div>
           <div className="field">
             <label htmlFor="nama_produk" className="font-bold">
               Nama Barang

@@ -43,7 +43,7 @@ export default function SidebarComponent() {
       <div className="flex flex-col h-full justify-between">
         <div className="overflow-y-auto">
           <ul className="list-none p-3">
-            {/* <li>
+            <li>
               <NavLink
                 to="/"
                 className={({ isActive }) =>
@@ -53,12 +53,12 @@ export default function SidebarComponent() {
                 }
               >
                 <i className="pi pi-home mr-2" />
-                <span className="font-medium">Dashboard</span>
+                <span className="font-medium">Barang</span>
               </NavLink>
-            </li> */}
+            </li>
             <li>
               <NavLink
-                to="/"
+                to="/barang-masuk"
                 className={({ isActive }) =>
                   `flex items-center p-3 rounded text-black hover:bg-gray-200 w-full ${
                     isActive ? "bg-blue-300" : "bg-white"
