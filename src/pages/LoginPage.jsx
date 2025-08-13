@@ -154,6 +154,9 @@ export default function LoginPage() {
           />
         </div>
       </div>
+      <p className="text-white text-lg fixed bottom-0 w-full text-center pb-4">
+        &copy; 2025 Eka Hanny (Magang PUR TW II 2025)
+      </p>
     </div>
   );
 }

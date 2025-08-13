@@ -54,10 +54,10 @@ export function NavBar() {
 
   const start = (
     <div className="flex items-center h-10">
-      <img src={logo} alt="Logo" className="w-14 ml-4" />
-      <span className="font-semibold text-xl text-black ml-2">
+      <img src={logo} alt="Logo" className="w-40 ml-4" />
+      {/* <span className="font-semibold text-xl text-black ml-2">
         Cokonuri Mart
-      </span>
+      </span> */}
     </div>
   );
 
