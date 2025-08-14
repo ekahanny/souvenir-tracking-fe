@@ -53,8 +53,6 @@ export default function TabelKategori() {
       const response = await ProductService.getAllProducts();
       const products = response.data || [];
       const productInStock = products.filter((p) => p.stok > 0);
-      console.log("product in stock: ", productInStock);
-
       setProducts(productInStock);
     } catch (error) {
       console.error("Gagal mengambil produk: ", error);

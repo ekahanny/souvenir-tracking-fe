@@ -84,7 +84,6 @@ export default function TabelRingkasanProduk() {
     try {
       const response = await InLogProdService.getAllLogProducts();
       setProductsLog(response.LogProduk || []);
-      console.log("Response API Log Products: ", response);
     } catch (error) {
       console.error("Gagal mengambil produk dalam log:", error);
     }

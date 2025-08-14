@@ -111,8 +111,6 @@ export default function UserProfile() {
           newPassword: formData.newPassword,
           confirmPassword: formData.confirmPassword,
         };
-
-        console.log("Sending password update:", payload);
         await UserService.updatePassword(payload);
         showToast("success", "Success", "Password berhasil diubah");
       }
