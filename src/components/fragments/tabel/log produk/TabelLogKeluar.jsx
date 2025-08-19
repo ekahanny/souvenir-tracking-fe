@@ -172,28 +172,21 @@ export default function TabelLogKeluar() {
       return;
     }
 
-    if (!isEditMode && (!product.nama_kegiatan || !product.pic)) {
-      toast.current.show({
-        severity: "warn",
-        summary: "Peringatan",
-        detail: "Nama kegiatan dan PIC harus diisi!",
-        life: 3000,
-      });
-      return;
-    }
-
     try {
       const formattedDate = new Date(product.tanggal);
       formattedDate.setHours(formattedDate.getHours() + 8);
 
       if (isEditMode) {
+        // Data untuk edit - hanya update yang diperbolehkan
         const productData = {
           nama_produk: product.nama_produk,
           stok: product.stok,
           tanggal: formattedDate.toISOString(),
         };
+
         await InLogProdService.updateLogProduct(product._id, productData);
       } else {
+        // Data untuk tambah baru
         const productData = {
           nama_produk: product.nama_produk,
           stok: product.stok,
@@ -203,6 +196,7 @@ export default function TabelLogKeluar() {
           isProdukMasuk: false,
         };
 
+        // Validasi stok
         const selectedProduct = productList.find(
           (p) => p.nama_produk === product.nama_produk
         );
@@ -233,6 +227,7 @@ export default function TabelLogKeluar() {
 
         await InLogProdService.addLogProduct(productData);
 
+        // Update stok produk
         setProductList((prevList) =>
           prevList.map((item) =>
             item.nama_produk === product.nama_produk
@@ -273,17 +268,9 @@ export default function TabelLogKeluar() {
   };
 
   const editProduct = (product) => {
-    const kegiatanData = kegiatan.find(
-      (k) =>
-        k.id === product.kegiatan || k.nama_kegiatan === product.nama_kegiatan
-    );
-
     setProduct({
       ...product,
-      nama_kegiatan: kegiatanData?.nama_kegiatan || product.nama_kegiatan || "",
-      pic: kegiatanData?.pic || product.pic || "",
       tanggal: product.tanggal ? new Date(product.tanggal) : new Date(),
-      kategori: product.kategori?.id || product.kategori,
       stok: product.stok,
     });
 
@@ -659,7 +646,7 @@ export default function TabelLogKeluar() {
               />
             </div>
 
-            <div className="field">
+            {/* <div className="field">
               <label htmlFor="tanggal_kegiatan" className="font-bold">
                 Tanggal Kegiatan
               </label>
@@ -672,7 +659,7 @@ export default function TabelLogKeluar() {
                 showIcon
                 dateFormat="dd-mm-yy"
               />
-            </div>
+            </div> */}
           </>
         ) : (
           <>
@@ -835,6 +822,23 @@ export default function TabelLogKeluar() {
           {submitted && !product.stok && (
             <small className="p-error">Jumlah barang keluar harus diisi</small>
           )}
+        </div>
+
+        <div className="field">
+          <label htmlFor="tanggal_kegiatan" className="font-bold">
+            Tanggal Kegiatan
+          </label>
+          <Calendar
+            id="tanggal_kegiatan"
+            inputClassName={classNames(
+              "border border-slate-400 rounded-md p-2"
+            )}
+            className="bg-sky-300 rounded-md"
+            value={product.tanggal}
+            onChange={(e) => setProduct({ ...product, tanggal: e.value })}
+            showIcon
+            dateFormat="dd-mm-yy"
+          />
         </div>
       </Dialog>
 

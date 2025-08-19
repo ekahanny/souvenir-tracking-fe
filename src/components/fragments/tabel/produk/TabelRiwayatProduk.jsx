@@ -107,8 +107,6 @@ export default function TabelRiwayatProduk() {
       //   pic: formData.pic,
       // });
 
-      // If you need to update logs' dates as well, you would add that logic here
-      // For example:
       await KegiatanService.updateKegiatan(
         selectedKegiatan._id,
         formData.tanggal
@@ -324,19 +322,16 @@ export default function TabelRiwayatProduk() {
         </div>
 
         <div className="field">
-          <label htmlFor="tanggal" className="font-bold">
+          <label htmlFor="tanggal_kegiatan" className="font-bold">
             Tanggal Kegiatan
           </label>
           <Calendar
-            id="tanggal"
-            inputClassName={classNames(
-              "border border-slate-400 rounded-md p-2"
-            )}
-            className="bg-sky-300 rounded-md"
-            value={formData.tanggal}
-            onChange={(e) => setFormData({ ...formData, tanggal: e.value })}
+            id="tanggal_kegiatan"
+            inputClassName="border border-slate-400 rounded-md p-2 bg-gray-100"
+            className="bg-gray-100 rounded-md"
+            readOnlyInput
             showIcon
-            dateFormat="dd/mm/yy"
+            dateFormat="dd-mm-yy"
           />
         </div>
       </Dialog>
