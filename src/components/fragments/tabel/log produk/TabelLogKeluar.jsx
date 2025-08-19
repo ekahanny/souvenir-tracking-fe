@@ -34,7 +34,7 @@ export default function TabelLogKeluar() {
   const [product, setProduct] = useState(emptyProduct);
   const [productList, setProductList] = useState([]);
   const [productDialog, setProductDialog] = useState(false);
-  const [deleteLogProductDialog, setdeleteLogProductDialog] = useState(false);
+  const [deleteLogProductDialog, setDeleteLogProductDialog] = useState(false);
   const [kegiatan, setKegiatan] = useState([]);
   const [showNewActivityFields, setShowNewActivityFields] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -136,8 +136,8 @@ export default function TabelLogKeluar() {
     setProductDialog(false);
   };
 
-  const hidedeleteLogProductDialog = () => {
-    setdeleteLogProductDialog(false);
+  const hideDeleteLogProductDialog = () => {
+    setDeleteLogProductDialog(false);
   };
 
   const getFirstInDate = async (namaProduk) => {
@@ -162,7 +162,6 @@ export default function TabelLogKeluar() {
   const saveProduct = async () => {
     setSubmitted(true);
 
-    // Validasi untuk semua mode
     if (!product.nama_produk || !product.stok) {
       toast.current.show({
         severity: "warn",
@@ -173,7 +172,6 @@ export default function TabelLogKeluar() {
       return;
     }
 
-    // Validasi khusus untuk tambah baru
     if (!isEditMode && (!product.nama_kegiatan || !product.pic)) {
       toast.current.show({
         severity: "warn",
@@ -189,7 +187,6 @@ export default function TabelLogKeluar() {
       formattedDate.setHours(formattedDate.getHours() + 8);
 
       if (isEditMode) {
-        // Data untuk edit
         const productData = {
           nama_produk: product.nama_produk,
           stok: product.stok,
@@ -197,7 +194,6 @@ export default function TabelLogKeluar() {
         };
         await InLogProdService.updateLogProduct(product._id, productData);
       } else {
-        // Data untuk tambah baru - semua field
         const productData = {
           nama_produk: product.nama_produk,
           stok: product.stok,
@@ -207,7 +203,6 @@ export default function TabelLogKeluar() {
           isProdukMasuk: false,
         };
 
-        // Validasi stok hanya untuk log baru
         const selectedProduct = productList.find(
           (p) => p.nama_produk === product.nama_produk
         );
@@ -238,7 +233,6 @@ export default function TabelLogKeluar() {
 
         await InLogProdService.addLogProduct(productData);
 
-        // Update stok produk
         setProductList((prevList) =>
           prevList.map((item) =>
             item.nama_produk === product.nama_produk
@@ -278,23 +272,7 @@ export default function TabelLogKeluar() {
     }
   };
 
-  // const editProduct = (product) => {
-  //   setProduct({
-  //     ...product,
-  //     tanggal: product.tanggal ? new Date(product.tanggal) : new Date(),
-  //     kategori: product.kategori?.id || product.kategori,
-  //     stok: product.stok,
-  //     // Tetapkan nama_kegiatan dan pic dari data asli (tidak bisa diubah)
-  //     nama_kegiatan: product.nama_kegiatan || "",
-  //     pic: product.pic || "",
-  //   });
-
-  //   setIsEditMode(true);
-  //   setProductDialog(true);
-  // };
-
   const editProduct = (product) => {
-    // Cari data kegiatan berdasarkan ID kegiatan atau nama kegiatan
     const kegiatanData = kegiatan.find(
       (k) =>
         k.id === product.kegiatan || k.nama_kegiatan === product.nama_kegiatan
@@ -313,9 +291,9 @@ export default function TabelLogKeluar() {
     setProductDialog(true);
   };
 
-  const confirmdeleteLogProduct = (product) => {
+  const confirmDeleteLogProduct = (product) => {
     setProduct(product);
-    setdeleteLogProductDialog(true);
+    setDeleteLogProductDialog(true);
   };
 
   const deleteLogProduct = async () => {
@@ -325,8 +303,8 @@ export default function TabelLogKeluar() {
         prevProducts.filter((val) => val._id !== product._id)
       );
 
-      setdeleteLogProductDialog(false);
-      setProduct(products);
+      setDeleteLogProductDialog(false);
+      setProduct(emptyProduct);
       toast.current.show({
         severity: "success",
         summary: "Berhasil",
@@ -335,6 +313,12 @@ export default function TabelLogKeluar() {
       });
     } catch (error) {
       console.error("Gagal menghapus produk:", error);
+      toast.current.show({
+        severity: "error",
+        summary: "Gagal",
+        detail: "Gagal menghapus produk",
+        life: 3000,
+      });
     }
   };
 
@@ -361,7 +345,6 @@ export default function TabelLogKeluar() {
       "Stok (pcs)": product.stok ? product.stok : 0,
       "Nama Kegiatan": product.nama_kegiatan || "",
       PIC: product.pic || "",
-      // "Ditambahkan Oleh": userMap[product.createdBy] || "Unknown",
     }));
 
     const ws = XLSX.utils.json_to_sheet(excelData);
@@ -437,7 +420,7 @@ export default function TabelLogKeluar() {
           rounded
           outlined
           className="bg-red-300"
-          onClick={() => confirmdeleteLogProduct(rowData)}
+          onClick={() => confirmDeleteLogProduct(rowData)}
           size="small"
         />
       </div>
@@ -538,7 +521,7 @@ export default function TabelLogKeluar() {
         label="No"
         icon="pi pi-times"
         outlined
-        onClick={hidedeleteLogProductDialog}
+        onClick={hideDeleteLogProductDialog}
         className="px-2 py-1.5 border-1 border-sky-400 text-sm text-sky-400 mr-2"
       />
       <Button
@@ -639,6 +622,7 @@ export default function TabelLogKeluar() {
         </DataTable>
       </div>
 
+      {/* Product Dialog */}
       <Dialog
         visible={productDialog}
         style={{ width: "32rem" }}
@@ -649,231 +633,8 @@ export default function TabelLogKeluar() {
         footer={productDialogFooter}
         onHide={hideDialog}
       >
-        {/* Form untuk mode edit */}
         {isEditMode ? (
           <>
-            {/* Field yang tidak bisa diubah (readonly) */}
-            <div className="field">
-              <label htmlFor="nama_kegiatan" className="font-bold">
-                Nama Kegiatan
-              </label>
-              <InputText
-                id="nama_kegiatan"
-                value={product.nama_kegiatan}
-                readOnly
-                className="border border-slate-400 rounded-md p-2 bg-gray-100"
-              />
-            </div>
-
-            <div className="field">
-              <label htmlFor="pic" className="font-bold">
-                PIC (Penanggung Jawab)
-              </label>
-              <InputText
-                id="pic"
-                value={product.pic}
-                readOnly
-                className="border border-slate-400 rounded-md p-2 bg-gray-100"
-              />
-            </div>
-          </>
-        ) : (
-          /* Form untuk mode tambah */
-          <>
-            {!showNewActivityFields ? (
-              <div className="field">
-                <label htmlFor="nama_kegiatan" className="font-bold">
-                  Nama Kegiatan
-                </label>
-                <div className="flex gap-2">
-                  <Dropdown
-                    id="nama_kegiatan"
-                    value={product.nama_kegiatan}
-                    onChange={(e) => {
-                      const selectedKegiatan = kegiatan.find(
-                        (k) => k.nama_kegiatan === e.value
-                      );
-                      setProduct({
-                        ...product,
-                        nama_kegiatan: e.value,
-                        pic: selectedKegiatan?.pic || "",
-                        tanggal: selectedKegiatan?.tanggal || new Date(),
-                      });
-                    }}
-                    options={kegiatan.map((activity) => ({
-                      label: activity.nama_kegiatan || "Kegiatan Tanpa Nama",
-                      value: activity.nama_kegiatan || "",
-                    }))}
-                    placeholder={
-                      kegiatan.length === 0
-                        ? "Tidak ada kegiatan"
-                        : "Pilih Kegiatan"
-                    }
-                    className={classNames("border border-slate-400 w-full", {
-                      "p-invalid border-red-500":
-                        submitted && !product.nama_kegiatan,
-                    })}
-                  />
-                </div>
-                {submitted && !product.nama_kegiatan && (
-                  <small className="p-error">Nama kegiatan harus diisi</small>
-                )}
-
-                <Button
-                  icon="pi pi-plus"
-                  className="p-button-text p-button-sm px-2.5 py-1.5 mt-2.5 text-sm border-1 border-sky-400 text-white bg-sky-400"
-                  onClick={() => setShowNewActivityFields(true)}
-                  label="Tambah Kegiatan Baru"
-                />
-              </div>
-            ) : (
-              <>
-                <div className="field">
-                  <label htmlFor="new_nama_kegiatan" className="font-bold">
-                    Nama Kegiatan Baru
-                  </label>
-                  <InputText
-                    id="new_nama_kegiatan"
-                    value={product.nama_kegiatan}
-                    onChange={(e) => onInputChange(e, "nama_kegiatan")}
-                    className={classNames(
-                      "border border-slate-400 rounded-md p-2",
-                      {
-                        "p-invalid border-red-500":
-                          submitted && !product.nama_kegiatan,
-                      }
-                    )}
-                  />
-                  {submitted && !product.nama_kegiatan && (
-                    <small className="p-error">Nama kegiatan harus diisi</small>
-                  )}
-                </div>
-
-                <div className="field">
-                  <label htmlFor="pic" className="font-bold">
-                    PIC (Penanggung Jawab)
-                  </label>
-                  <InputText
-                    id="pic"
-                    value={product.pic}
-                    onChange={(e) => onInputChange(e, "pic")}
-                    className={classNames(
-                      "border border-slate-400 rounded-md p-2",
-                      {
-                        "p-invalid border-red-500": submitted && !product.pic,
-                      }
-                    )}
-                  />
-                  {submitted && !product.pic && (
-                    <small className="p-error">PIC harus diisi</small>
-                  )}
-                </div>
-
-                <div className="field">
-                  <label htmlFor="tanggal_kegiatan" className="font-bold">
-                    Tanggal Kegiatan
-                  </label>
-                  <Calendar
-                    id="tanggal_kegiatan"
-                    inputClassName={classNames(
-                      "border border-slate-400 rounded-md p-2"
-                    )}
-                    className="bg-sky-300 rounded-md"
-                    value={product.tanggal}
-                    onChange={(e) =>
-                      setProduct({ ...product, tanggal: e.value })
-                    }
-                    showIcon
-                    dateFormat="dd-mm-yy"
-                  />
-                </div>
-
-                <div className="field">
-                  <label htmlFor="tanggal_kegiatan" className="font-bold">
-                    Tanggal Kegiatan
-                  </label>
-                  <Calendar
-                    id="tanggal_kegiatan"
-                    inputClassName="border border-slate-400 rounded-md p-2"
-                    className="bg-sky-300 rounded-md"
-                    value={product.tanggal}
-                    onChange={(e) =>
-                      setProduct({ ...product, tanggal: e.value })
-                    }
-                    showIcon
-                    dateFormat="dd-mm-yy"
-                  />
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {/* Field yang sama untuk kedua mode */}
-        <div className="field">
-          <label htmlFor="nama_produk" className="font-bold">
-            Nama Barang
-          </label>
-          <Dropdown
-            value={product.nama_produk}
-            onChange={onProductNameChange}
-            options={
-              isLoadingProducts
-                ? [{ label: "Memuat data...", value: null }]
-                : productList?.map((p) => ({
-                    label: `${p.nama_produk} (Stok: ${p.stok})`,
-                    value: p.nama_produk,
-                  }))
-            }
-            filter
-            showClear
-            optionLabel="label"
-            placeholder={isLoadingProducts ? "Memuat..." : "Pilih Produk..."}
-            disabled={isLoadingProducts || isEditMode} // Disable dropdown saat edit
-            className={classNames("border border-slate-400 w-full", {
-              "p-invalid border-red-500": submitted && !product.nama_produk,
-            })}
-          />
-          {submitted && !product.nama_produk && (
-            <small className="p-error">Pilih produk terlebih dahulu</small>
-          )}
-        </div>
-
-        <div className="field">
-          <label htmlFor="stok" className="font-bold">
-            Jumlah Barang Keluar
-          </label>
-          <InputNumber
-            id="stok"
-            value={product.stok}
-            onChange={(e) => onInputNumberChange(e, "stok")}
-            inputClassName={classNames(
-              "border border-slate-400 p-2 rounded-md",
-              {
-                "p-invalid border-red-500": submitted && !product.stok,
-              }
-            )}
-          />
-          {submitted && !product.stok && (
-            <small className="p-error">Jumlah barang keluar harus diisi</small>
-          )}
-        </div>
-      </Dialog>
-
-      <Dialog
-        visible={productDialog}
-        style={{ width: "32rem" }}
-        breakpoints={{ "960px": "75vw", "641px": "90vw" }}
-        header={isEditMode ? "Edit Barang Keluar" : "Tambah Barang Keluar"}
-        modal
-        className="p-fluid"
-        footer={productDialogFooter}
-        onHide={hideDialog}
-      >
-        {/* Form untuk mode edit */}
-        {isEditMode ? (
-          <>
-            {/* Field yang tidak bisa diubah (readonly) */}
             <div className="field">
               <label htmlFor="nama_kegiatan" className="font-bold">
                 Nama Kegiatan
@@ -914,7 +675,6 @@ export default function TabelLogKeluar() {
             </div>
           </>
         ) : (
-          /* Form untuk mode tambah */
           <>
             {!showNewActivityFields ? (
               <div className="field">
@@ -1028,7 +788,6 @@ export default function TabelLogKeluar() {
           </>
         )}
 
-        {/* Field yang bisa diubah (untuk semua mode) */}
         <div className="field">
           <label htmlFor="nama_produk" className="font-bold">
             Nama Barang
@@ -1048,7 +807,7 @@ export default function TabelLogKeluar() {
             showClear
             optionLabel="label"
             placeholder={isLoadingProducts ? "Memuat..." : "Pilih Produk..."}
-            disabled={isLoadingProducts}
+            disabled={isLoadingProducts || isEditMode}
             className={classNames("border border-slate-400 w-full", {
               "p-invalid border-red-500": submitted && !product.nama_produk,
             })}
@@ -1079,6 +838,31 @@ export default function TabelLogKeluar() {
         </div>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        visible={deleteLogProductDialog}
+        style={{ width: "32rem" }}
+        breakpoints={{ "960px": "75vw", "641px": "90vw" }}
+        header="Konfirmasi"
+        modal
+        footer={deleteLogProductDialogFooter}
+        onHide={hideDeleteLogProductDialog}
+      >
+        <div className="confirmation-content">
+          <i
+            className="pi pi-exclamation-triangle mr-3"
+            style={{ fontSize: "1.5rem" }}
+          />
+          {product && (
+            <span>
+              Apakah Anda yakin ingin menghapus log produk{" "}
+              <b>{product.nama_produk}</b>?
+            </span>
+          )}
+        </div>
+      </Dialog>
+
+      {/* Export Dialog */}
       <Dialog
         visible={exportDialog}
         style={{ width: "32rem" }}
