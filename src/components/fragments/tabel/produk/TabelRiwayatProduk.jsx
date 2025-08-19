@@ -331,6 +331,7 @@ export default function TabelRiwayatProduk() {
             className="bg-gray-100 rounded-md"
             readOnlyInput
             showIcon
+            disabled
             dateFormat="dd-mm-yy"
           />
         </div>

@@ -794,7 +794,7 @@ export default function TabelLogKeluar() {
             showClear
             optionLabel="label"
             placeholder={isLoadingProducts ? "Memuat..." : "Pilih Produk..."}
-            disabled={isLoadingProducts || isEditMode}
+            disabled={isLoadingProducts} // Hapus isEditMode dari disabled
             className={classNames("border border-slate-400 w-full", {
               "p-invalid border-red-500": submitted && !product.nama_produk,
             })}
