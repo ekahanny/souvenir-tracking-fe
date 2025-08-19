@@ -25,6 +25,18 @@ const KegiatanService = {
       return [];
     }
   },
+
+  updateKegiatan: async (id_kegiatan) => {
+    try {
+      const response = await axiosInstance.put(
+        `/riwayat-kegiatan/${id_kegiatan}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Gagal mengupdate kegiatan:", error);
+      return [];
+    }
+  },
 };
 
 export default KegiatanService;

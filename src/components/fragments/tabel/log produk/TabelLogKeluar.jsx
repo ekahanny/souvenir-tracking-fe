@@ -162,23 +162,19 @@ export default function TabelLogKeluar() {
   const saveProduct = async () => {
     setSubmitted(true);
 
-    if (!product.nama_produk || !product.tanggal || !product.stok) {
+    // Validasi untuk semua mode
+    if (!product.nama_produk || !product.stok) {
       toast.current.show({
         severity: "warn",
         summary: "Peringatan",
-        detail: "Lengkapi data terlebih dahulu!",
+        detail: "Nama produk dan stok harus diisi!",
         life: 3000,
       });
       return;
     }
 
-    if (
-      !product.nama_kegiatan ||
-      (!product.pic &&
-        !kegiatan.some(
-          (k) => k.nama_kegiatan === product.nama_kegiatan && k.pic
-        ))
-    ) {
+    // Validasi khusus untuk tambah baru
+    if (!isEditMode && (!product.nama_kegiatan || !product.pic)) {
       toast.current.show({
         severity: "warn",
         summary: "Peringatan",
@@ -188,63 +184,61 @@ export default function TabelLogKeluar() {
       return;
     }
 
-    // Jika PIC kosong tapi ada di data kegiatan, isi otomatis
-    if (!product.pic) {
-      const selectedKegiatan = kegiatan.find(
-        (k) => k.nama_kegiatan === product.nama_kegiatan
-      );
-      if (selectedKegiatan?.pic) {
-        setProduct((prev) => ({ ...prev, pic: selectedKegiatan.pic }));
-      }
-    }
-
-    const selectedProduct = productList.find(
-      (p) => p.nama_produk === product.nama_produk
-    );
-
-    if (selectedProduct && product.stok > selectedProduct.stok) {
-      toast.current.show({
-        severity: "error",
-        summary: "Error",
-        detail: `Stok keluar melebihi stok yang tersedia (${selectedProduct.stok})`,
-        life: 3000,
-      });
-      return;
-    }
-
-    const firstInDate = await getFirstInDate(product.nama_produk);
-    const outDate = new Date(product.tanggal);
-
-    if (firstInDate && outDate < firstInDate) {
-      const formattedFirstInDate = firstInDate.toLocaleDateString("id-ID");
-      toast.current.show({
-        severity: "warn",
-        summary: "Peringatan",
-        detail: `Tanggal keluar tidak boleh lebih awal dari tanggal masuk pertama (${formattedFirstInDate})`,
-        life: 5000,
-      });
-      return;
-    }
-
     try {
       const formattedDate = new Date(product.tanggal);
       formattedDate.setHours(formattedDate.getHours() + 8);
 
-      const productData = {
-        nama_produk: product.nama_produk,
-        tanggal: formattedDate.toISOString(),
-        kategori: product.kategori,
-        stok: product.stok,
-        isProdukMasuk: false,
-        nama_kegiatan: product.nama_kegiatan,
-        pic: product.pic,
-      };
-
       if (isEditMode) {
+        // Data untuk edit
+        const productData = {
+          nama_produk: product.nama_produk,
+          stok: product.stok,
+          tanggal: formattedDate.toISOString(),
+        };
         await InLogProdService.updateLogProduct(product._id, productData);
       } else {
+        // Data untuk tambah baru - semua field
+        const productData = {
+          nama_produk: product.nama_produk,
+          stok: product.stok,
+          tanggal: formattedDate.toISOString(),
+          nama_kegiatan: product.nama_kegiatan,
+          pic: product.pic,
+          isProdukMasuk: false,
+        };
+
+        // Validasi stok hanya untuk log baru
+        const selectedProduct = productList.find(
+          (p) => p.nama_produk === product.nama_produk
+        );
+
+        if (selectedProduct && product.stok > selectedProduct.stok) {
+          toast.current.show({
+            severity: "error",
+            summary: "Error",
+            detail: `Stok keluar melebihi stok yang tersedia (${selectedProduct.stok})`,
+            life: 3000,
+          });
+          return;
+        }
+
+        const firstInDate = await getFirstInDate(product.nama_produk);
+        const outDate = new Date(product.tanggal);
+
+        if (firstInDate && outDate < firstInDate) {
+          const formattedFirstInDate = firstInDate.toLocaleDateString("id-ID");
+          toast.current.show({
+            severity: "warn",
+            summary: "Peringatan",
+            detail: `Tanggal keluar tidak boleh lebih awal dari tanggal masuk pertama (${formattedFirstInDate})`,
+            life: 5000,
+          });
+          return;
+        }
+
         await InLogProdService.addLogProduct(productData);
 
+        // Update stok produk
         setProductList((prevList) =>
           prevList.map((item) =>
             item.nama_produk === product.nama_produk
@@ -284,7 +278,23 @@ export default function TabelLogKeluar() {
     }
   };
 
+  // const editProduct = (product) => {
+  //   setProduct({
+  //     ...product,
+  //     tanggal: product.tanggal ? new Date(product.tanggal) : new Date(),
+  //     kategori: product.kategori?.id || product.kategori,
+  //     stok: product.stok,
+  //     // Tetapkan nama_kegiatan dan pic dari data asli (tidak bisa diubah)
+  //     nama_kegiatan: product.nama_kegiatan || "",
+  //     pic: product.pic || "",
+  //   });
+
+  //   setIsEditMode(true);
+  //   setProductDialog(true);
+  // };
+
   const editProduct = (product) => {
+    // Cari data kegiatan berdasarkan ID kegiatan atau nama kegiatan
     const kegiatanData = kegiatan.find(
       (k) =>
         k.id === product.kegiatan || k.nama_kegiatan === product.nama_kegiatan
@@ -292,10 +302,13 @@ export default function TabelLogKeluar() {
 
     setProduct({
       ...product,
-      tanggal: kegiatanData?.tanggal || new Date(product.tanggal),
-      kategori: product.kategori?.id || product.kategori,
+      nama_kegiatan: kegiatanData?.nama_kegiatan || product.nama_kegiatan || "",
       pic: kegiatanData?.pic || product.pic || "",
+      tanggal: product.tanggal ? new Date(product.tanggal) : new Date(),
+      kategori: product.kategori?.id || product.kategori,
+      stok: product.stok,
     });
+
     setIsEditMode(true);
     setProductDialog(true);
   };
@@ -636,75 +649,20 @@ export default function TabelLogKeluar() {
         footer={productDialogFooter}
         onHide={hideDialog}
       >
-        {!showNewActivityFields ? (
-          <div className="field">
-            <label htmlFor="nama_kegiatan" className="font-bold">
-              Nama Kegiatan
-            </label>
-            <div className="flex gap-2">
-              <Dropdown
-                id="nama_kegiatan"
-                value={product.nama_kegiatan}
-                onChange={(e) => {
-                  const selectedKegiatan = kegiatan.find(
-                    (k) => k.nama_kegiatan === e.value
-                  );
-                  setProduct({
-                    ...product,
-                    nama_kegiatan: e.value,
-                    pic: selectedKegiatan?.pic || "",
-                    tanggal: selectedKegiatan?.tanggal || new Date(),
-                  });
-                }}
-                options={kegiatan.map((activity) => ({
-                  label: activity.nama_kegiatan || "Kegiatan Tanpa Nama",
-                  value: activity.nama_kegiatan || "",
-                }))}
-                placeholder={
-                  kegiatan.length === 0
-                    ? "Tidak ada kegiatan"
-                    : "Pilih Kegiatan"
-                }
-                className={classNames("border border-slate-400 w-full", {
-                  "p-invalid border-red-500":
-                    submitted && !product.nama_kegiatan,
-                })}
-              />
-            </div>
-            {submitted && !product.nama_kegiatan && (
-              <small className="p-error">Nama kegiatan harus diisi</small>
-            )}
-
-            {!showNewActivityFields && (
-              <Button
-                icon="pi pi-plus"
-                className="p-button-text p-button-sm px-2.5 py-1.5 mt-2.5 text-sm border-1 border-sky-400 text-white bg-sky-400"
-                onClick={() => setShowNewActivityFields(true)}
-                label="Tambah Kegiatan Baru"
-              />
-            )}
-          </div>
-        ) : (
+        {/* Form untuk mode edit */}
+        {isEditMode ? (
           <>
+            {/* Field yang tidak bisa diubah (readonly) */}
             <div className="field">
-              <label htmlFor="new_nama_kegiatan" className="font-bold">
-                Nama Kegiatan Baru
+              <label htmlFor="nama_kegiatan" className="font-bold">
+                Nama Kegiatan
               </label>
               <InputText
-                id="new_nama_kegiatan"
+                id="nama_kegiatan"
                 value={product.nama_kegiatan}
-                onChange={(e) => onInputChange(e, "nama_kegiatan")}
-                className={classNames(
-                  "border border-slate-400 rounded-md p-2",
-                  {
-                    "p-invalid border-red-500":
-                      submitted && !product.nama_kegiatan,
-                  }
-                )}
+                readOnly
+                className="border border-slate-400 rounded-md p-2 bg-gray-100"
               />
-              {submitted && !product.nama_kegiatan && (
-                <small className="p-error">Nama kegiatan harus diisi</small>
-              )}
             </div>
 
             <div className="field">
@@ -714,46 +672,363 @@ export default function TabelLogKeluar() {
               <InputText
                 id="pic"
                 value={product.pic}
-                onChange={(e) => onInputChange(e, "pic")}
-                className={classNames(
-                  "border border-slate-400 rounded-md p-2",
-                  {
-                    "p-invalid border-red-500": submitted && !product.pic,
-                  }
-                )}
+                readOnly
+                className="border border-slate-400 rounded-md p-2 bg-gray-100"
               />
-              {submitted && !product.pic && (
-                <small className="p-error">PIC harus diisi</small>
-              )}
+            </div>
+          </>
+        ) : (
+          /* Form untuk mode tambah */
+          <>
+            {!showNewActivityFields ? (
+              <div className="field">
+                <label htmlFor="nama_kegiatan" className="font-bold">
+                  Nama Kegiatan
+                </label>
+                <div className="flex gap-2">
+                  <Dropdown
+                    id="nama_kegiatan"
+                    value={product.nama_kegiatan}
+                    onChange={(e) => {
+                      const selectedKegiatan = kegiatan.find(
+                        (k) => k.nama_kegiatan === e.value
+                      );
+                      setProduct({
+                        ...product,
+                        nama_kegiatan: e.value,
+                        pic: selectedKegiatan?.pic || "",
+                        tanggal: selectedKegiatan?.tanggal || new Date(),
+                      });
+                    }}
+                    options={kegiatan.map((activity) => ({
+                      label: activity.nama_kegiatan || "Kegiatan Tanpa Nama",
+                      value: activity.nama_kegiatan || "",
+                    }))}
+                    placeholder={
+                      kegiatan.length === 0
+                        ? "Tidak ada kegiatan"
+                        : "Pilih Kegiatan"
+                    }
+                    className={classNames("border border-slate-400 w-full", {
+                      "p-invalid border-red-500":
+                        submitted && !product.nama_kegiatan,
+                    })}
+                  />
+                </div>
+                {submitted && !product.nama_kegiatan && (
+                  <small className="p-error">Nama kegiatan harus diisi</small>
+                )}
+
+                <Button
+                  icon="pi pi-plus"
+                  className="p-button-text p-button-sm px-2.5 py-1.5 mt-2.5 text-sm border-1 border-sky-400 text-white bg-sky-400"
+                  onClick={() => setShowNewActivityFields(true)}
+                  label="Tambah Kegiatan Baru"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="field">
+                  <label htmlFor="new_nama_kegiatan" className="font-bold">
+                    Nama Kegiatan Baru
+                  </label>
+                  <InputText
+                    id="new_nama_kegiatan"
+                    value={product.nama_kegiatan}
+                    onChange={(e) => onInputChange(e, "nama_kegiatan")}
+                    className={classNames(
+                      "border border-slate-400 rounded-md p-2",
+                      {
+                        "p-invalid border-red-500":
+                          submitted && !product.nama_kegiatan,
+                      }
+                    )}
+                  />
+                  {submitted && !product.nama_kegiatan && (
+                    <small className="p-error">Nama kegiatan harus diisi</small>
+                  )}
+                </div>
+
+                <div className="field">
+                  <label htmlFor="pic" className="font-bold">
+                    PIC (Penanggung Jawab)
+                  </label>
+                  <InputText
+                    id="pic"
+                    value={product.pic}
+                    onChange={(e) => onInputChange(e, "pic")}
+                    className={classNames(
+                      "border border-slate-400 rounded-md p-2",
+                      {
+                        "p-invalid border-red-500": submitted && !product.pic,
+                      }
+                    )}
+                  />
+                  {submitted && !product.pic && (
+                    <small className="p-error">PIC harus diisi</small>
+                  )}
+                </div>
+
+                <div className="field">
+                  <label htmlFor="tanggal_kegiatan" className="font-bold">
+                    Tanggal Kegiatan
+                  </label>
+                  <Calendar
+                    id="tanggal_kegiatan"
+                    inputClassName={classNames(
+                      "border border-slate-400 rounded-md p-2"
+                    )}
+                    className="bg-sky-300 rounded-md"
+                    value={product.tanggal}
+                    onChange={(e) =>
+                      setProduct({ ...product, tanggal: e.value })
+                    }
+                    showIcon
+                    dateFormat="dd-mm-yy"
+                  />
+                </div>
+
+                <div className="field">
+                  <label htmlFor="tanggal_kegiatan" className="font-bold">
+                    Tanggal Kegiatan
+                  </label>
+                  <Calendar
+                    id="tanggal_kegiatan"
+                    inputClassName="border border-slate-400 rounded-md p-2"
+                    className="bg-sky-300 rounded-md"
+                    value={product.tanggal}
+                    onChange={(e) =>
+                      setProduct({ ...product, tanggal: e.value })
+                    }
+                    showIcon
+                    dateFormat="dd-mm-yy"
+                  />
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* Field yang sama untuk kedua mode */}
+        <div className="field">
+          <label htmlFor="nama_produk" className="font-bold">
+            Nama Barang
+          </label>
+          <Dropdown
+            value={product.nama_produk}
+            onChange={onProductNameChange}
+            options={
+              isLoadingProducts
+                ? [{ label: "Memuat data...", value: null }]
+                : productList?.map((p) => ({
+                    label: `${p.nama_produk} (Stok: ${p.stok})`,
+                    value: p.nama_produk,
+                  }))
+            }
+            filter
+            showClear
+            optionLabel="label"
+            placeholder={isLoadingProducts ? "Memuat..." : "Pilih Produk..."}
+            disabled={isLoadingProducts || isEditMode} // Disable dropdown saat edit
+            className={classNames("border border-slate-400 w-full", {
+              "p-invalid border-red-500": submitted && !product.nama_produk,
+            })}
+          />
+          {submitted && !product.nama_produk && (
+            <small className="p-error">Pilih produk terlebih dahulu</small>
+          )}
+        </div>
+
+        <div className="field">
+          <label htmlFor="stok" className="font-bold">
+            Jumlah Barang Keluar
+          </label>
+          <InputNumber
+            id="stok"
+            value={product.stok}
+            onChange={(e) => onInputNumberChange(e, "stok")}
+            inputClassName={classNames(
+              "border border-slate-400 p-2 rounded-md",
+              {
+                "p-invalid border-red-500": submitted && !product.stok,
+              }
+            )}
+          />
+          {submitted && !product.stok && (
+            <small className="p-error">Jumlah barang keluar harus diisi</small>
+          )}
+        </div>
+      </Dialog>
+
+      <Dialog
+        visible={productDialog}
+        style={{ width: "32rem" }}
+        breakpoints={{ "960px": "75vw", "641px": "90vw" }}
+        header={isEditMode ? "Edit Barang Keluar" : "Tambah Barang Keluar"}
+        modal
+        className="p-fluid"
+        footer={productDialogFooter}
+        onHide={hideDialog}
+      >
+        {/* Form untuk mode edit */}
+        {isEditMode ? (
+          <>
+            {/* Field yang tidak bisa diubah (readonly) */}
+            <div className="field">
+              <label htmlFor="nama_kegiatan" className="font-bold">
+                Nama Kegiatan
+              </label>
+              <InputText
+                id="nama_kegiatan"
+                value={product.nama_kegiatan}
+                readOnly
+                className="border border-slate-400 rounded-md p-2 bg-gray-100"
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="pic" className="font-bold">
+                PIC (Penanggung Jawab)
+              </label>
+              <InputText
+                id="pic"
+                value={product.pic}
+                readOnly
+                className="border border-slate-400 rounded-md p-2 bg-gray-100"
+              />
             </div>
 
             <div className="field">
               <label htmlFor="tanggal_kegiatan" className="font-bold">
                 Tanggal Kegiatan
               </label>
-              {showNewActivityFields ? (
-                <Calendar
-                  id="tanggal_kegiatan"
-                  inputClassName={classNames(
-                    "border border-slate-400 rounded-md p-2"
-                  )}
-                  className="bg-sky-300 rounded-md"
-                  value={product.tanggal}
-                  onChange={(e) => setProduct({ ...product, tanggal: e.value })}
-                  showIcon
-                  dateFormat="dd-mm-yy"
-                />
-              ) : (
-                <div className="p-2 border border-slate-300 rounded-md bg-gray-100">
-                  {product.tanggal
-                    ? formatDate(product.tanggal)
-                    : "Pilih kegiatan terlebih dahulu"}
-                </div>
-              )}
+              <Calendar
+                id="tanggal_kegiatan"
+                inputClassName="border border-slate-400 rounded-md p-2 bg-gray-100"
+                className="bg-gray-100 rounded-md"
+                value={product.tanggal}
+                readOnlyInput
+                showIcon
+                dateFormat="dd-mm-yy"
+              />
             </div>
+          </>
+        ) : (
+          /* Form untuk mode tambah */
+          <>
+            {!showNewActivityFields ? (
+              <div className="field">
+                <label htmlFor="nama_kegiatan" className="font-bold">
+                  Nama Kegiatan
+                </label>
+                <div className="flex gap-2">
+                  <Dropdown
+                    id="nama_kegiatan"
+                    value={product.nama_kegiatan}
+                    onChange={(e) => {
+                      const selectedKegiatan = kegiatan.find(
+                        (k) => k.nama_kegiatan === e.value
+                      );
+                      setProduct({
+                        ...product,
+                        nama_kegiatan: e.value,
+                        pic: selectedKegiatan?.pic || "",
+                        tanggal: selectedKegiatan?.tanggal || new Date(),
+                      });
+                    }}
+                    options={kegiatan.map((activity) => ({
+                      label: activity.nama_kegiatan || "Kegiatan Tanpa Nama",
+                      value: activity.nama_kegiatan || "",
+                    }))}
+                    placeholder={
+                      kegiatan.length === 0
+                        ? "Tidak ada kegiatan"
+                        : "Pilih Kegiatan"
+                    }
+                    className={classNames("border border-slate-400 w-full", {
+                      "p-invalid border-red-500":
+                        submitted && !product.nama_kegiatan,
+                    })}
+                  />
+                </div>
+                {submitted && !product.nama_kegiatan && (
+                  <small className="p-error">Nama kegiatan harus diisi</small>
+                )}
+
+                <Button
+                  icon="pi pi-plus"
+                  className="p-button-text p-button-sm px-2.5 py-1.5 mt-2.5 text-sm border-1 border-sky-400 text-white bg-sky-400"
+                  onClick={() => setShowNewActivityFields(true)}
+                  label="Tambah Kegiatan Baru"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="field">
+                  <label htmlFor="new_nama_kegiatan" className="font-bold">
+                    Nama Kegiatan Baru
+                  </label>
+                  <InputText
+                    id="new_nama_kegiatan"
+                    value={product.nama_kegiatan}
+                    onChange={(e) => onInputChange(e, "nama_kegiatan")}
+                    className={classNames(
+                      "border border-slate-400 rounded-md p-2",
+                      {
+                        "p-invalid border-red-500":
+                          submitted && !product.nama_kegiatan,
+                      }
+                    )}
+                  />
+                  {submitted && !product.nama_kegiatan && (
+                    <small className="p-error">Nama kegiatan harus diisi</small>
+                  )}
+                </div>
+
+                <div className="field">
+                  <label htmlFor="pic" className="font-bold">
+                    PIC (Penanggung Jawab)
+                  </label>
+                  <InputText
+                    id="pic"
+                    value={product.pic}
+                    onChange={(e) => onInputChange(e, "pic")}
+                    className={classNames(
+                      "border border-slate-400 rounded-md p-2",
+                      {
+                        "p-invalid border-red-500": submitted && !product.pic,
+                      }
+                    )}
+                  />
+                  {submitted && !product.pic && (
+                    <small className="p-error">PIC harus diisi</small>
+                  )}
+                </div>
+
+                <div className="field">
+                  <label htmlFor="tanggal_kegiatan" className="font-bold">
+                    Tanggal Kegiatan
+                  </label>
+                  <Calendar
+                    id="tanggal_kegiatan"
+                    inputClassName={classNames(
+                      "border border-slate-400 rounded-md p-2"
+                    )}
+                    className="bg-sky-300 rounded-md"
+                    value={product.tanggal}
+                    onChange={(e) =>
+                      setProduct({ ...product, tanggal: e.value })
+                    }
+                    showIcon
+                    dateFormat="dd-mm-yy"
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
 
+        {/* Field yang bisa diubah (untuk semua mode) */}
         <div className="field">
           <label htmlFor="nama_produk" className="font-bold">
             Nama Barang
@@ -800,28 +1075,6 @@ export default function TabelLogKeluar() {
           />
           {submitted && !product.stok && (
             <small className="p-error">Jumlah barang keluar harus diisi</small>
-          )}
-        </div>
-      </Dialog>
-
-      <Dialog
-        visible={deleteLogProductDialog}
-        style={{ width: "32rem" }}
-        breakpoints={{ "960px": "75vw", "641px": "90vw" }}
-        header="Konfirmasi Penghapusan"
-        modal
-        footer={deleteLogProductDialogFooter}
-        onHide={hidedeleteLogProductDialog}
-      >
-        <div className="confirmation-content">
-          <i
-            className="pi pi-exclamation-triangle mr-3"
-            style={{ fontSize: "1.5rem" }}
-          />
-          {product && (
-            <span>
-              Apakah anda yakin ingin menghapus <b>{product.nama_produk}</b>?
-            </span>
           )}
         </div>
       </Dialog>

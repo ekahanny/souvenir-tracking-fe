@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import UserService from "../services/UserService";
 import { useNavigate } from "react-router-dom";
 import { Toast } from "primereact/toast";
+import logo2 from "../assets/logo2.png";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -80,9 +81,10 @@ export default function LoginPage() {
       <Toast ref={toast} />
 
       <div className="w-full max-w-md text-center mb-4 mt-5">
-        <h1 className="text-white text-3xl md:text-4xl font-bold">
+        {/* <h1 className="text-white text-3xl md:text-4xl font-bold">
           Welcome Back!👋🏻
-        </h1>
+        </h1> */}
+        <img src={logo2} />
       </div>
 
       {/* Login Card */}

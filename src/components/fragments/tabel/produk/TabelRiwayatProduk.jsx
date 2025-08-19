@@ -4,14 +4,26 @@ import { DataTable } from "primereact/datatable";
 import { IconField } from "primereact/iconfield";
 import { InputIcon } from "primereact/inputicon";
 import { InputText } from "primereact/inputtext";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "primereact/button";
 import { useNavigate } from "react-router-dom";
 import KegiatanService from "../../../../services/KegiatanService";
+import { Toast } from "primereact/toast";
+import { Calendar } from "primereact/calendar";
+import { Dialog } from "primereact/dialog";
+import { classNames } from "primereact/utils";
 
 export default function TabelRiwayatProduk() {
   const [kegiatan, setKegiatan] = useState([]);
   const navigate = useNavigate();
+  const [editDialogVisible, setEditDialogVisible] = useState(false);
+  const [selectedKegiatan, setSelectedKegiatan] = useState(null);
+  const [formData, setFormData] = useState({
+    nama_kegiatan: "",
+    pic: "",
+    tanggal: null,
+  });
+  const toast = useRef(null);
 
   // Filter configuration
   const [filters, setFilters] = useState({
@@ -26,6 +38,10 @@ export default function TabelRiwayatProduk() {
       const formattedKegiatan = kegiatans.map((keg) => {
         const logDate =
           keg.logs.length > 0 ? keg.logs[0].tanggal : keg.createdAt;
+        const totalStokKeluar = keg.logs.reduce(
+          (total, log) => total + log.stok,
+          0
+        );
 
         return {
           _id: keg._id,
@@ -33,9 +49,11 @@ export default function TabelRiwayatProduk() {
           pic: keg.pic,
           tanggal: logDate,
           totalProduk: keg.produk.length,
-          totalStokKeluar: keg.logs.reduce((total, log) => total + log.stok, 0),
+          totalStokKeluar: totalStokKeluar,
         };
       });
+      // Filter hanya kegiatan dengan stok keluar > 0
+      // .filter((keg) => keg.totalStokKeluar > 0);
 
       setKegiatan(formattedKegiatan);
     } catch (error) {
@@ -59,17 +77,83 @@ export default function TabelRiwayatProduk() {
     navigate(`/riwayat-kegiatan/${rowData._id}`);
   };
 
+  const showEditDialog = (kegiatan) => {
+    setSelectedKegiatan(kegiatan);
+    setFormData({
+      nama_kegiatan: kegiatan.nama_kegiatan,
+      pic: kegiatan.pic,
+      tanggal: new Date(kegiatan.tanggal),
+    });
+    setEditDialogVisible(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!formData.nama_kegiatan || !formData.pic || !formData.tanggal) {
+      toast.current.show({
+        severity: "warn",
+        summary: "Peringatan",
+        detail: "Semua field harus diisi",
+        life: 3000,
+      });
+      return;
+    }
+
+    try {
+      // setLoading(true);
+
+      // Update kegiatan data
+      // await KegiatanService.updateKegiatan(selectedKegiatan._id, {
+      //   nama_kegiatan: formData.nama_kegiatan,
+      //   pic: formData.pic,
+      // });
+
+      // If you need to update logs' dates as well, you would add that logic here
+      // For example:
+      await KegiatanService.updateKegiatan(
+        selectedKegiatan._id,
+        formData.tanggal
+      );
+
+      toast.current.show({
+        severity: "success",
+        summary: "Berhasil",
+        detail: "Data kegiatan berhasil diperbarui",
+        life: 3000,
+      });
+
+      setEditDialogVisible(false);
+      fetchkegiatan();
+    } catch (error) {
+      toast.current.show({
+        severity: "error",
+        summary: "Gagal",
+        detail:
+          error.response?.data?.message || "Gagal memperbarui data kegiatan",
+        life: 3000,
+      });
+      console.error("Error updating kegiatan:", error);
+    }
+  };
+
   const actionBodyTemplate = (rowData) => {
     return (
       <div className="flex justify-center">
         <Button
+          icon="pi pi-pencil"
           rounded
+          outlined
           size="small"
-          className="bg-sky-400 hover:bg-sky-500 text-white text-sm px-3 py-2"
+          className="mr-2 bg-green-300"
+          onClick={() => showEditDialog(rowData)}
+        />
+        <Button
+          icon="pi pi-clipboard"
+          rounded
+          outlined
+          size="small"
+          className="bg-sky-400 mr-2"
           onClick={() => showDetailKegiatan(rowData)}
-        >
-          Show Detail
-        </Button>
+        />
       </div>
     );
   };
@@ -82,13 +166,22 @@ export default function TabelRiwayatProduk() {
     });
   };
 
-  const produkBodyTemplate = (rowData) => {
-    return <div>{rowData.totalProduk} Produk</div>;
-  };
-
-  const stokBodyTemplate = (rowData) => {
-    return <div>{rowData.totalStokKeluar} pcs</div>;
-  };
+  const editDialogFooter = (
+    <div>
+      <Button
+        label="Batal"
+        icon="pi pi-times"
+        onClick={() => setEditDialogVisible(false)}
+        className="px-2 py-1.5 border-1 border-slate-400 text-sm text-slate-700 mr-2"
+      />
+      <Button
+        label="Simpan"
+        icon="pi pi-check"
+        onClick={handleEditSubmit}
+        className="px-2.5 py-1.5 text-sm border-1 border-sky-400 text-white bg-sky-400"
+      />
+    </div>
+  );
 
   const renderHeader = () => {
     const value = filters["global"] ? filters["global"].value : "";
@@ -114,6 +207,8 @@ export default function TabelRiwayatProduk() {
 
   return (
     <div>
+      <Toast ref={toast} />
+
       <div className="card ml-1 mt-3 rounded-lg shadow-lg">
         <DataTable
           value={kegiatan}
@@ -191,6 +286,60 @@ export default function TabelRiwayatProduk() {
           />
         </DataTable>
       </div>
+
+      <Dialog
+        visible={editDialogVisible}
+        style={{ width: "32rem" }}
+        breakpoints={{ "960px": "75vw", "641px": "90vw" }}
+        header="Edit Kegiatan"
+        modal
+        className="p-fluid"
+        footer={editDialogFooter}
+        onHide={() => setEditDialogVisible(false)}
+      >
+        <div className="field">
+          <label htmlFor="nama_kegiatan" className="font-bold">
+            Nama Kegiatan
+          </label>
+          <InputText
+            id="nama_kegiatan"
+            value={formData.nama_kegiatan}
+            onChange={(e) =>
+              setFormData({ ...formData, nama_kegiatan: e.target.value })
+            }
+            className="border border-slate-400 rounded-md p-2"
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="pic" className="font-bold">
+            PIC
+          </label>
+          <InputText
+            id="pic"
+            value={formData.pic}
+            onChange={(e) => setFormData({ ...formData, pic: e.target.value })}
+            className="border border-slate-400 rounded-md p-2 "
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="tanggal" className="font-bold">
+            Tanggal Kegiatan
+          </label>
+          <Calendar
+            id="tanggal"
+            inputClassName={classNames(
+              "border border-slate-400 rounded-md p-2"
+            )}
+            className="bg-sky-300 rounded-md"
+            value={formData.tanggal}
+            onChange={(e) => setFormData({ ...formData, tanggal: e.value })}
+            showIcon
+            dateFormat="dd/mm/yy"
+          />
+        </div>
+      </Dialog>
     </div>
   );
 }

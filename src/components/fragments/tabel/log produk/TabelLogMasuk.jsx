@@ -122,28 +122,7 @@ export default function TabelLogMasuk() {
       return;
     }
 
-    if (showNewProductFields && isProductExist) {
-      toast.current.show({
-        severity: "error",
-        summary: "Gagal",
-        detail: "Produk sudah ada, gunakan produk yang sudah terdaftar",
-        life: 3000,
-      });
-      return;
-    }
-
     try {
-      // Jika produk baru, tambahkan dulu ke master produk
-      if (showNewProductFields) {
-        await ProductService.addProduct({
-          nama_produk: product.nama_produk,
-          kategori: product.kategori,
-          stok: 0,
-          jenis_satuan: "pcs",
-        });
-        await fetchProducts();
-      }
-
       const productData = {
         nama_produk: product.nama_produk,
         tanggal: new Date(product.tanggal).toISOString(),
@@ -152,42 +131,78 @@ export default function TabelLogMasuk() {
         isProdukMasuk: true,
       };
 
-      // Tambahkan ke log barang masuk
-      await InLogProdService.addLogProduct(productData);
-
-      // Update stok produk yang sudah ada
-      const currentProduct = productList.find(
+      // Cek apakah produk sudah ada
+      let currentProduct = productList.find(
         (p) => p.nama_produk === product.nama_produk
       );
-      if (currentProduct) {
-        await ProductService.updateProduct(currentProduct._id, {
-          ...currentProduct,
-          stok: currentProduct.stok + product.stok,
+
+      // Jika produk belum ada dan dalam mode tambah produk baru
+      if (!currentProduct && showNewProductFields) {
+        // Buat produk baru
+        const newProduct = await ProductService.addProduct({
+          nama_produk: product.nama_produk,
+          kategori: product.kategori,
+          stok: 0, // Stok awal 0 karena akan ditambah via log
+          jenis_satuan: "pcs",
         });
-        await fetchProducts();
+        currentProduct = newProduct.data;
+        await fetchProducts(); // Refresh daftar produk
       }
 
-      // Refresh daftar log produk supaya format konsisten
+      if (isEditMode) {
+        // Mode Edit
+        await InLogProdService.updateLogProduct(product._id, productData);
+        const originalLog = products.find((p) => p._id === product._id);
+        const stokDifference = product.stok - originalLog.stok;
+
+        if (currentProduct) {
+          await ProductService.updateProduct(currentProduct._id, {
+            ...currentProduct,
+            stok: currentProduct.stok + stokDifference,
+          });
+        }
+      } else {
+        // Mode Tambah
+        await InLogProdService.addLogProduct(productData);
+
+        if (currentProduct) {
+          await ProductService.updateProduct(currentProduct._id, {
+            ...currentProduct,
+            stok: currentProduct.stok + product.stok,
+          });
+        }
+      }
+
+      await fetchProducts();
       await fetchLogProducts();
 
       toast.current.show({
         severity: "success",
         summary: "Berhasil",
-        detail: "Log produk berhasil ditambahkan",
+        detail: `Log produk berhasil ${
+          isEditMode ? "diupdate" : "ditambahkan"
+        }`,
         life: 3000,
       });
 
-      // Reset form & tutup dialog
       setProductDialog(false);
       setProduct(emptyProduct);
       setShowNewProductFields(false);
       setIsEditMode(false);
     } catch (error) {
-      console.error("Gagal menambahkan log produk:", error);
+      console.error("Gagal menyimpan log produk:", error);
+
+      let errorMessage = "Gagal menyimpan log produk";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast.current.show({
         severity: "error",
         summary: "Gagal",
-        detail: error.response?.data?.message || "Gagal menambahkan log produk",
+        detail: errorMessage,
         life: 3000,
       });
     }
@@ -195,9 +210,11 @@ export default function TabelLogMasuk() {
 
   const editProduct = (product) => {
     setProduct({
-      ...product,
+      _id: product._id, // Pastikan ID disimpan
+      nama_produk: product.nama_produk,
       tanggal: new Date(product.tanggal),
       kategori: product.kategori?.id || product.kategori,
+      stok: product.stok,
     });
     setIsEditMode(true);
     setProductDialog(true);
