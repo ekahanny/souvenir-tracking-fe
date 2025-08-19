@@ -630,6 +630,7 @@ export default function TabelLogKeluar() {
                 id="nama_kegiatan"
                 value={product.nama_kegiatan}
                 readOnly
+                disabled
                 className="border border-slate-400 rounded-md p-2 bg-gray-100"
               />
             </div>
@@ -642,6 +643,7 @@ export default function TabelLogKeluar() {
                 id="pic"
                 value={product.pic}
                 readOnly
+                disabled
                 className="border border-slate-400 rounded-md p-2 bg-gray-100"
               />
             </div>
