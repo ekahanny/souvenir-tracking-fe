@@ -647,21 +647,6 @@ export default function TabelLogKeluar() {
                 className="border border-slate-400 rounded-md p-2 bg-gray-100"
               />
             </div>
-
-            <div className="field">
-              <label htmlFor="tanggal_kegiatan" className="font-bold">
-                Tanggal Keluar
-              </label>
-              <Calendar
-                id="tanggal_kegiatan"
-                inputClassName="border border-slate-400 rounded-md p-2"
-                className="bg-sky-300 rounded-md"
-                value={product.tanggal}
-                onChange={(e) => setProduct({ ...product, tanggal: e.value })}
-                showIcon
-                dateFormat="dd-mm-yy"
-              />
-            </div>
           </>
         ) : (
           <>
@@ -776,6 +761,21 @@ export default function TabelLogKeluar() {
             )}
           </>
         )}
+
+        <div className="field">
+          <label htmlFor="tanggal_kegiatan" className="font-bold">
+            Tanggal Keluar
+          </label>
+          <Calendar
+            id="tanggal_kegiatan"
+            inputClassName="border border-slate-400 rounded-md p-2"
+            className="bg-sky-300 rounded-md"
+            value={product.tanggal}
+            onChange={(e) => setProduct({ ...product, tanggal: e.value })}
+            showIcon
+            dateFormat="dd-mm-yy"
+          />
+        </div>
 
         <div className="field">
           <label htmlFor="nama_produk" className="font-bold">
