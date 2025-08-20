@@ -7,7 +7,7 @@ const BASE_URL = "https://souvenir-tracking-be.vercel.app/";
 // Konfigurasi Axios Instance
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  // withCredentials: true,
+  withCredentials: true,
 });
 
 // Request interceptor -> menambahkan header auth ke setiap request
