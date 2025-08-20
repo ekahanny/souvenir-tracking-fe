@@ -826,7 +826,7 @@ export default function TabelLogKeluar() {
           )}
         </div>
 
-        <div className="field">
+        {/* <div className="field">
           <label htmlFor="tanggal_kegiatan" className="font-bold">
             Tanggal Kegiatan
           </label>
@@ -841,7 +841,7 @@ export default function TabelLogKeluar() {
             showIcon
             dateFormat="dd-mm-yy"
           />
-        </div>
+        </div> */}
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
