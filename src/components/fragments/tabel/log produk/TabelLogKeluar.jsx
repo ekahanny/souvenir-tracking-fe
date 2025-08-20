@@ -648,20 +648,20 @@ export default function TabelLogKeluar() {
               />
             </div>
 
-            {/* <div className="field">
+            <div className="field">
               <label htmlFor="tanggal_kegiatan" className="font-bold">
-                Tanggal Kegiatan
+                Tanggal Keluar
               </label>
               <Calendar
                 id="tanggal_kegiatan"
-                inputClassName="border border-slate-400 rounded-md p-2 bg-gray-100"
-                className="bg-gray-100 rounded-md"
+                inputClassName="border border-slate-400 rounded-md p-2"
+                className="bg-sky-300 rounded-md"
                 value={product.tanggal}
-                readOnlyInput
+                onChange={(e) => setProduct({ ...product, tanggal: e.value })}
                 showIcon
                 dateFormat="dd-mm-yy"
               />
-            </div> */}
+            </div>
           </>
         ) : (
           <>
@@ -796,7 +796,7 @@ export default function TabelLogKeluar() {
             showClear
             optionLabel="label"
             placeholder={isLoadingProducts ? "Memuat..." : "Pilih Produk..."}
-            disabled={isLoadingProducts} // Hapus isEditMode dari disabled
+            disabled={isLoadingProducts || isEditMode}
             className={classNames("border border-slate-400 w-full", {
               "p-invalid border-red-500": submitted && !product.nama_produk,
             })}
@@ -825,23 +825,6 @@ export default function TabelLogKeluar() {
             <small className="p-error">Jumlah barang keluar harus diisi</small>
           )}
         </div>
-
-        {/* <div className="field">
-          <label htmlFor="tanggal_kegiatan" className="font-bold">
-            Tanggal Kegiatan
-          </label>
-          <Calendar
-            id="tanggal_kegiatan"
-            inputClassName={classNames(
-              "border border-slate-400 rounded-md p-2"
-            )}
-            className="bg-sky-300 rounded-md"
-            value={product.tanggal}
-            onChange={(e) => setProduct({ ...product, tanggal: e.value })}
-            showIcon
-            dateFormat="dd-mm-yy"
-          />
-        </div> */}
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
